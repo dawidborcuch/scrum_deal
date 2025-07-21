@@ -1,6 +1,6 @@
 {% extends 'poker/base.html' %}
 
-{% block title %}Plan It Poker - Stół {{ table_name }}{% endblock %}
+{% block title %}ScrumDeal - Stół {{ table_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -192,7 +192,7 @@ function updatePlayersList(players, allVoted) {
         // Przycisk usuwania tylko dla krupiera i nie przy własnej karcie
         let removeBtn = '';
         if (isCroupierNow && player.nickname !== nickname) {
-            removeBtn = `<button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${player.nickname}")' title='Usuń gracza'><i class='bi bi-x'></i></button>`;
+            removeBtn = `<button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${player.nickname}")' title='Usuń gracza'>X</button>`;
         }
         playerCard.innerHTML = `
             <div class='card player-card position-relative'>

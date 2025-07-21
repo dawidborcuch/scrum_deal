@@ -36,7 +36,21 @@ class PokerConsumer(AsyncWebsocketConsumer):
             table_data = await self.get_table_data()
             if table_data:
                 players_data = table_data.get('players', [])
+                # Sprawdź, czy odchodził krupier
+                was_croupier = False
+                for p in players_data:
+                    if p['nickname'] == nickname:
+                        was_croupier = p.get('is_croupier', False)
+                        break
+                # Usuń gracza
                 players_data = [p for p in players_data if p['nickname'] != nickname]
+                # Jeśli odchodził krupier i są jeszcze inni gracze, przekaż rolę losowemu graczowi
+                if was_croupier and players_data:
+                    import random
+                    new_croupier = random.choice(players_data)
+                    for p in players_data:
+                        p['is_croupier'] = (p['nickname'] == new_croupier['nickname'])
+                    logger.info(f"Nowy krupier po odejściu poprzedniego: {new_croupier['nickname']} na stole {self.table_name}")
                 table_data['players'] = players_data
                 await self.save_table_data(table_data)
                 logger.info(f"Gracz {nickname} został usunięty po rozłączeniu ze stołu {self.table_name}")

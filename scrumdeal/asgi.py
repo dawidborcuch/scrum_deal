@@ -1,5 +1,5 @@
 """
-ASGI config for plan_it_poker project.
+ASGI config for scrumdeal project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -12,7 +12,7 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'plan_it_poker.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'scrumdeal.settings')
 
 django_asgi_app = get_asgi_application()
 

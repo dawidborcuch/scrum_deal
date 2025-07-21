@@ -6,11 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="57e6492a-a0f2-437b-90e7-7937f0ab5023" name="Changes" comment="poker">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/consumers.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/consumers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/templates/poker/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/templates/poker/table.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/table.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +71,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753096597545</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="poker">
+      <option name="closed" value="true" />
+      <created>1753108811606</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1753108811606</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

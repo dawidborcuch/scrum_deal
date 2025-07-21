@@ -1,5 +1,5 @@
 """
-WSGI config for plan_it_poker project.
+WSGI config for scrumdeal project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'plan_it_poker.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'scrumdeal.settings')
 
 application = get_wsgi_application()
