@@ -4,14 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="57e6492a-a0f2-437b-90e7-7937f0ab5023" name="Changes" comment="poker">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrumdeal/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrumdeal/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrumdeal/asgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrumdeal/asgi.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrumdeal/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrumdeal/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrumdeal/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrumdeal/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrumdeal/wsgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrumdeal/wsgi.py" afterDir="false" />
-    </list>
+    <list default="true" id="57e6492a-a0f2-437b-90e7-7937f0ab5023" name="Changes" comment="poker" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -106,7 +99,23 @@
       <option name="project" value="LOCAL" />
       <updated>1753123111451</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="poker">
+      <option name="closed" value="true" />
+      <created>1753127598552</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1753127598552</updated>
+    </task>
+    <task id="LOCAL-00007" summary="poker">
+      <option name="closed" value="true" />
+      <created>1753127680018</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1753127680018</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

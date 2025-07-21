@@ -10,7 +10,7 @@
                 <h2 class="text-center">Dołącz do stołu</h2>
             </div>
             <div class="card-body">
-                <form id="joinForm" method="post">
+                <form id="joinForm" method="post" action="{% url 'poker:join_table' %}">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="tableName" class="form-label">Nazwa stołu</label>
@@ -64,13 +64,5 @@ function checkCroupierAvailability() {
         });
 }
 document.getElementById('tableName').addEventListener('input', checkCroupierAvailability);
-document.getElementById('joinForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const tableName = document.getElementById('tableName').value;
-    const nickname = document.getElementById('nickname').value;
-    const role = document.querySelector('input[name="role"]:checked').value;
-    const isCroupier = document.getElementById('isCroupier').checked ? '1' : '0';
-    window.location.href = `/table/${tableName}/?nickname=${encodeURIComponent(nickname)}&role=${encodeURIComponent(role)}&is_croupier=${isCroupier}`;
-});
 </script>
 {% endblock %} 
