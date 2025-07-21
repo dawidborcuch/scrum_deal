@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
+from django.http import JsonResponse
+from django.core.cache import cache
 
 # Create your views here.
 
@@ -28,3 +30,10 @@ def table_view(request, table_name):
         'is_croupier': is_croupier,
         'card_values': [0, 1, 2, 3, 5, 8, 13, 20, 40, 100]
     })
+
+def check_croupier(request, table_name):
+    table_data = cache.get(f'table_{table_name}')
+    croupier_exists = False
+    if table_data:
+        croupier_exists = any(p.get('is_croupier', False) for p in table_data.get('players', []))
+    return JsonResponse({'croupier_exists': croupier_exists})

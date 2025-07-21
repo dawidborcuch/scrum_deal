@@ -125,13 +125,16 @@ function connectWebSocket() {
             window.location.href = '/';
             return;
         }
+        if (data.type === 'croupier_exists') {
+            alert(data.message);
+            window.location.href = '/';
+            return;
+        }
         if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'player_removed') {
-            console.log('Aktualizacja listy graczy:', data.players);
             updatePlayersList(data.players, data.all_voted);
             updateCardsState(data.players, data.all_voted);
         } else if (data.type === 'table_reset') {
             console.log('Resetowanie stołu dla wszystkich graczy');
-            // Resetowanie stanu kart dla wszystkich graczy
             document.querySelectorAll('.poker-card').forEach(c => {
                 c.classList.remove('selected');
                 c.classList.remove('disabled');
@@ -157,9 +160,18 @@ function updatePlayersList(players, allVoted) {
     console.log('Aktualizacja listy graczy:', players);
     const playersList = document.getElementById('playersList');
     playersList.innerHTML = '';
-    
-    // Uczestnicy
+    // Ustaw isCroupier dynamicznie na podstawie danych z backendu (na początek funkcji!)
+    const currentPlayer = players.find(p => p.nickname === nickname);
+    const isCroupierNow = !!(currentPlayer && currentPlayer.is_croupier);
+    // Dodaj nagłówek nad uczestnikami
     const participants = players.filter(p => p.role !== 'observer');
+    if (participants.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'col-12';
+        label.innerHTML = '<h5 class="text-muted">Gracze w rozgrywce</h5>';
+        playersList.appendChild(label);
+    }
+    // Uczestnicy
     participants.forEach(player => {
         const playerCard = document.createElement('div');
         playerCard.className = 'col-md-4 mb-3';
@@ -175,16 +187,19 @@ function updatePlayersList(players, allVoted) {
             }
         }
         
+        let croupierBadge = player.is_croupier ? '<span class="badge bg-primary ms-2">Krupier</span>' : '';
+        
+        // Przycisk usuwania tylko dla krupiera i nie przy własnej karcie
+        let removeBtn = '';
+        if (isCroupierNow && player.nickname !== nickname) {
+            removeBtn = `<button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${player.nickname}")' title='Usuń gracza'><i class='bi bi-x'></i></button>`;
+        }
         playerCard.innerHTML = `
-            <div class="card player-card position-relative">
-                <button class="btn btn-sm btn-danger remove-player-btn" 
-                        onclick="removePlayer('${player.nickname}')"
-                        title="Usuń gracza">
-                    <i class="bi bi-x"></i>
-                </button>
-                <div class="card-body">
-                    <h5 class="card-title">${player.nickname}</h5>
-                    <p class="card-text">
+            <div class='card player-card position-relative'>
+                ${removeBtn}
+                <div class='card-body'>
+                    <h5 class='card-title'>${player.nickname} ${croupierBadge}</h5>
+                    <p class='card-text'>
                         ${voteDisplay}
                     </p>
                 </div>
@@ -209,12 +224,13 @@ function updatePlayersList(players, allVoted) {
         label.innerHTML = '<h5 class="text-muted">Obserwatorzy</h5>';
         observersSection.appendChild(label);
         observers.forEach(observer => {
+            let croupierBadge = observer.is_croupier ? '<span class="badge bg-primary ms-2">Krupier</span>' : '';
             const observerCard = document.createElement('div');
             observerCard.className = 'col-md-3 mb-2';
             observerCard.innerHTML = `
                 <div class="card player-card bg-light">
                     <div class="card-body text-center">
-                        <span class="fw-bold">${observer.nickname}</span><br>
+                        <span class="fw-bold">${observer.nickname} ${croupierBadge}</span><br>
                         <span class="badge bg-secondary">Obserwator</span>
                     </div>
                 </div>
@@ -224,9 +240,22 @@ function updatePlayersList(players, allVoted) {
     }
 
     // DODANE: Odznacz kartę jeśli bieżący użytkownik nie zagłosował
-    const currentPlayer = players.find(p => p.nickname === nickname);
     if (currentPlayer && !currentPlayer.has_voted) {
         document.querySelectorAll('.poker-card').forEach(c => c.classList.remove('selected'));
+    }
+    // Pokaż/ukryj przycisk resetu
+    const resetBtn = document.getElementById('resetButton');
+    if (resetBtn) {
+        resetBtn.style.display = isCroupierNow ? '' : 'none';
+    }
+    // Dodaj menu kontekstowe tylko jeśli jesteś krupierem
+    if (isCroupierNow) {
+        addContextMenuToCards();
+    } else {
+        // Usuń menu kontekstowe z kart
+        document.querySelectorAll('.player-card').forEach(card => {
+            card.oncontextmenu = null;
+        });
     }
 }
 
@@ -274,6 +303,8 @@ function updateCardsState(players, allVotedParam) {
     }
 }
 
+// Dodaj menu kontekstowe do nadawania roli krupiera
+let contextMenu;
 document.addEventListener('DOMContentLoaded', function() {
     connectWebSocket();
 
@@ -304,7 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('resetButton').addEventListener('click', function() {
         console.log('Resetowanie stołu');
         socket.send(JSON.stringify({
-            'action': 'reset'
+            'action': 'reset',
+            'is_croupier': true // zawsze próbujemy, backend i tak sprawdzi
         }));
         
         // Resetowanie stanu kart
@@ -329,9 +361,64 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Ukryj przycisk resetu jeśli nie jesteś krupierem
-    if (isCroupier !== 'true') {
-        document.getElementById('resetButton').style.display = 'none';
-    }
+    // Usuwam window.isCroupier, nie jest już potrzebny
+
+    // Menu kontekstowe dla krupiera
+    contextMenu = document.createElement('div');
+    contextMenu.id = 'croupierContextMenu';
+    contextMenu.style.position = 'absolute';
+    contextMenu.style.display = 'none';
+    contextMenu.style.zIndex = 10000;
+    contextMenu.innerHTML = '<button class="btn btn-sm btn-primary w-100" id="assignCroupierBtn">Nadaj rolę krupiera</button>';
+    document.body.appendChild(contextMenu);
+
+    document.addEventListener('click', function() {
+        contextMenu.style.display = 'none';
+    });
+});
+
+function showCroupierContextMenu(nickname, x, y) {
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+    contextMenu.style.display = 'block';
+    contextMenu.nicknameToAssign = nickname;
+}
+
+function addContextMenuToCards() {
+    // Dodaj menu do wszystkich kart uczestników i obserwatorów
+    document.querySelectorAll('.player-card').forEach(card => {
+        card.oncontextmenu = function(e) {
+            e.preventDefault();
+            // Pobierz nick z karty uczestnika lub obserwatora
+            let nick = '';
+            const title = card.querySelector('.card-title');
+            if (title) {
+                nick = title.textContent.replace(/<[^>]+>/g, '').trim();
+            } else {
+                // Obserwatorzy mają tylko .fw-bold
+                const bold = card.querySelector('.fw-bold');
+                if (bold) {
+                    nick = bold.textContent.replace(/<[^>]+>/g, '').trim().split(' ')[0];
+                }
+            }
+            if (nick === nickname) return; // nie można nadać sobie
+            showCroupierContextMenu(nick, e.pageX, e.pageY);
+        };
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'assignCroupierBtn') {
+            const nick = contextMenu.nicknameToAssign;
+            socket.send(JSON.stringify({
+                'action': 'assign_croupier',
+                'nickname_to_assign': nick,
+                'is_croupier': true // zawsze próbujemy, backend i tak sprawdzi
+            }));
+            contextMenu.style.display = 'none';
+        }
+    });
 });
 </script>
 {% endblock %} 

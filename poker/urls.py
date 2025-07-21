@@ -6,4 +6,5 @@ app_name = 'poker'
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
     path('table/<str:table_name>/', views.table_view, name='table'),
+    path('check_croupier/<str:table_name>/', views.check_croupier, name='check_croupier'),
 ] 

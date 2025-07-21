@@ -51,6 +51,19 @@
 
 {% block extra_js %}
 <script>
+function checkCroupierAvailability() {
+    const tableName = document.getElementById('tableName').value;
+    if (!tableName) return;
+    fetch(`/check_croupier/${encodeURIComponent(tableName)}/`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('isCroupier').disabled = data.croupier_exists;
+            if (data.croupier_exists) {
+                document.getElementById('isCroupier').checked = false;
+            }
+        });
+}
+document.getElementById('tableName').addEventListener('input', checkCroupierAvailability);
 document.getElementById('joinForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const tableName = document.getElementById('tableName').value;

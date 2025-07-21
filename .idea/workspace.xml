@@ -9,6 +9,7 @@
       <change beforePath="$PROJECT_DIR$/poker/consumers.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/consumers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/poker/templates/poker/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/home.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/poker/templates/poker/table.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/table.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/poker/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/poker/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/poker/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -67,7 +68,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753093108821</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="poker">
+      <option name="closed" value="true" />
+      <created>1753096597545</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1753096597545</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

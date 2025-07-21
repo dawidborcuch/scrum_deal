@@ -63,6 +63,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.handle_reset()
             elif action == 'remove_player':
                 await self.handle_remove_player(data)
+            elif action == 'assign_croupier':
+                await self.handle_assign_croupier(data)
         except Exception as e:
             logger.error(f"Błąd podczas przetwarzania wiadomości: {str(e)}")
             await self.send(text_data=json.dumps({
@@ -78,14 +80,24 @@ class PokerConsumer(AsyncWebsocketConsumer):
         if not nickname:
             return
 
+        # Pobierz lub stwórz stół
+        table_data = await self.get_or_create_table()
+        players_data = table_data.get('players', [])
+
+        # Sprawdź czy już jest krupier
+        croupier_exists = any(p.get('is_croupier', False) for p in players_data)
+        if is_croupier in [True, 'true', 'True', 1, '1'] and croupier_exists:
+            await self.send(text_data=json.dumps({
+                'type': 'croupier_exists',
+                'message': 'Przy tym stole jest już krupier. Nie możesz wybrać tej opcji.'
+            }))
+            await self.close()
+            return
+
         self.nickname = nickname  # Zapamiętaj nick gracza
         self.role = role         # Zapamiętaj rolę gracza
         self.is_croupier = str(is_croupier).lower() in ['1', 'true']
 
-        # Pobierz lub stwórz stół
-        table_data = await self.get_or_create_table()
-        players_data = table_data.get('players', [])
-        
         # Sprawdź czy gracz już istnieje
         if any(p['nickname'] == nickname for p in players_data):
             # Nick już zajęty
@@ -207,11 +219,42 @@ class PokerConsumer(AsyncWebsocketConsumer):
             }
         )
 
+    async def handle_assign_croupier(self, data):
+        # Tylko obecny krupier może nadać rolę
+        if not getattr(self, 'is_croupier', False):
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Tylko obecny krupier może przekazać rolę krupiera!'
+            }))
+            return
+        nickname_to_assign = data.get('nickname_to_assign')
+        if not nickname_to_assign:
+            return
+        table_data = await self.get_table_data()
+        if not table_data:
+            return
+        players_data = table_data.get('players', [])
+        for p in players_data:
+            p['is_croupier'] = (p['nickname'] == nickname_to_assign)
+        await self.save_table_data(table_data)
+        logger.info(f"Rola krupiera została przekazana graczowi {nickname_to_assign} przy stole {self.table_name}")
+        await self.channel_layer.group_send(
+            self.table_group_name,
+            {
+                'type': 'player_joined',
+                'players': players_data,
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+            }
+        )
+
     async def player_joined(self, event):
         # Wysyłaj jawne głosy tylko do obserwatora
         players = event['players']
         all_voted = event['all_voted']
         role = getattr(self, 'role', 'participant')
+        # USTAWIENIE self.is_croupier na podstawie aktualnych danych
+        current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
+        self.is_croupier = current_player['is_croupier'] if current_player else False
         players_to_send = []
         for p in players:
             p_copy = p.copy()
@@ -234,6 +277,9 @@ class PokerConsumer(AsyncWebsocketConsumer):
         players = event['players']
         all_voted = event['all_voted']
         role = getattr(self, 'role', 'participant')
+        # USTAWIENIE self.is_croupier na podstawie aktualnych danych
+        current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
+        self.is_croupier = current_player['is_croupier'] if current_player else False
         players_to_send = []
         for p in players:
             p_copy = p.copy()
@@ -251,6 +297,10 @@ class PokerConsumer(AsyncWebsocketConsumer):
 
     async def table_reset(self, event):
         logger.warning(f"table_reset event dla kanału {self.channel_name}, nick={getattr(self, 'nickname', None)}, role={getattr(self, 'role', None)}, krupier={getattr(self, 'is_croupier', None)}")
+        # USTAWIENIE self.is_croupier na podstawie aktualnych danych
+        players = event['players']
+        current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
+        self.is_croupier = current_player['is_croupier'] if current_player else False
         await self.send(text_data=json.dumps(event))
 
     async def player_removed(self, event):
