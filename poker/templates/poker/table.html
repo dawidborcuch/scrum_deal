@@ -95,6 +95,8 @@
 <script>
 const tableName = "{{ table_name }}";
 const nickname = "{{ nickname }}";
+const role = "{{ role }}";
+const isCroupier = "{{ is_croupier|yesno:'true,false' }}";
 let socket = null;
 let hasVoted = false;
 
@@ -109,17 +111,24 @@ function connectWebSocket() {
         console.log('Połączenie WebSocket otwarte');
         socket.send(JSON.stringify({
             'action': 'join',
-            'nickname': nickname
+            'nickname': nickname,
+            'role': role,
+            'is_croupier': isCroupier === 'true'
         }));
     };
 
     socket.onmessage = function(e) {
         console.log('Otrzymano wiadomość:', e.data);
         const data = JSON.parse(e.data);
+        if (data.type === 'nickname_taken') {
+            alert(data.message);
+            window.location.href = '/';
+            return;
+        }
         if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'player_removed') {
             console.log('Aktualizacja listy graczy:', data.players);
             updatePlayersList(data.players, data.all_voted);
-            updateCardsState(data.players);
+            updateCardsState(data.players, data.all_voted);
         } else if (data.type === 'table_reset') {
             console.log('Resetowanie stołu dla wszystkich graczy');
             // Resetowanie stanu kart dla wszystkich graczy
@@ -129,7 +138,7 @@ function connectWebSocket() {
             });
             hasVoted = false;
             updatePlayersList(data.players, false);
-            updateCardsState(data.players);
+            updateCardsState(data.players, false);
         }
     };
 
@@ -149,13 +158,17 @@ function updatePlayersList(players, allVoted) {
     const playersList = document.getElementById('playersList');
     playersList.innerHTML = '';
     
-    players.forEach(player => {
+    // Uczestnicy
+    const participants = players.filter(p => p.role !== 'observer');
+    participants.forEach(player => {
         const playerCard = document.createElement('div');
         playerCard.className = 'col-md-4 mb-3';
         
         let voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
         if (player.has_voted) {
-            if (allVoted) {
+            if (role === 'observer') {
+                voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
+            } else if (allVoted) {
                 voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
             } else {
                 voteDisplay = '<span class="badge bg-info">Zagłosował</span>';
@@ -180,6 +193,36 @@ function updatePlayersList(players, allVoted) {
         playersList.appendChild(playerCard);
     });
 
+    // Obserwatorzy
+    let observers = players.filter(p => p.role === 'observer');
+    let observersSection = document.getElementById('observersList');
+    if (!observersSection) {
+        observersSection = document.createElement('div');
+        observersSection.id = 'observersList';
+        observersSection.className = 'row mt-4';
+        playersList.parentNode.appendChild(observersSection);
+    }
+    observersSection.innerHTML = '';
+    if (observers.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'col-12';
+        label.innerHTML = '<h5 class="text-muted">Obserwatorzy</h5>';
+        observersSection.appendChild(label);
+        observers.forEach(observer => {
+            const observerCard = document.createElement('div');
+            observerCard.className = 'col-md-3 mb-2';
+            observerCard.innerHTML = `
+                <div class="card player-card bg-light">
+                    <div class="card-body text-center">
+                        <span class="fw-bold">${observer.nickname}</span><br>
+                        <span class="badge bg-secondary">Obserwator</span>
+                    </div>
+                </div>
+            `;
+            observersSection.appendChild(observerCard);
+        });
+    }
+
     // DODANE: Odznacz kartę jeśli bieżący użytkownik nie zagłosował
     const currentPlayer = players.find(p => p.nickname === nickname);
     if (currentPlayer && !currentPlayer.has_voted) {
@@ -197,20 +240,34 @@ function removePlayer(nicknameToRemove) {
     }
 }
 
-function updateCardsState(players) {
+function updateCardsState(players, allVotedParam) {
     console.log('Aktualizacja stanu kart:', players);
     const currentPlayer = players.find(p => p.nickname === nickname);
     console.log('Aktualny gracz:', currentPlayer);
     
-    if (currentPlayer && currentPlayer.has_voted) {
-        console.log('Gracz już głosował');
-        hasVoted = true;
+    if (role === 'observer') {
+        document.querySelectorAll('.poker-card').forEach(card => {
+            card.classList.add('disabled');
+        });
+        return;
+    }
+
+    // Blokuj karty tylko jeśli wszyscy uczestnicy zagłosowali
+    if (typeof allVotedParam === 'undefined') {
+        // fallback na stary sposób
+        allVotedParam = false;
+        // spróbuj pobrać z window.lastAllVoted jeśli jest
+        if (typeof window.lastAllVoted !== 'undefined') {
+            allVotedParam = window.lastAllVoted;
+        }
+    }
+    window.lastAllVoted = allVotedParam;
+
+    if (allVotedParam) {
         document.querySelectorAll('.poker-card').forEach(card => {
             card.classList.add('disabled');
         });
     } else {
-        console.log('Gracz jeszcze nie głosował');
-        hasVoted = false;
         document.querySelectorAll('.poker-card').forEach(card => {
             card.classList.remove('disabled');
         });
@@ -223,6 +280,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.poker-card').forEach(card => {
         card.addEventListener('click', function() {
             console.log('Kliknięto kartę:', this.dataset.value);
+            if (role === 'observer') {
+                return;
+            }
             if (hasVoted) {
                 console.log('Gracz już głosował, ignoruję kliknięcie');
                 return;
@@ -267,6 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         updatePlayersList(players, false);
     });
+
+    // Ukryj przycisk resetu jeśli nie jesteś krupierem
+    if (isCroupier !== 'true') {
+        document.getElementById('resetButton').style.display = 'none';
+    }
 });
 </script>
 {% endblock %} 
