@@ -116,9 +116,19 @@ function connectWebSocket() {
     socket.onmessage = function(e) {
         console.log('Otrzymano wiadomość:', e.data);
         const data = JSON.parse(e.data);
-        if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'table_reset' || data.type === 'player_removed') {
+        if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'player_removed') {
             console.log('Aktualizacja listy graczy:', data.players);
             updatePlayersList(data.players, data.all_voted);
+            updateCardsState(data.players);
+        } else if (data.type === 'table_reset') {
+            console.log('Resetowanie stołu dla wszystkich graczy');
+            // Resetowanie stanu kart dla wszystkich graczy
+            document.querySelectorAll('.poker-card').forEach(c => {
+                c.classList.remove('selected');
+                c.classList.remove('disabled');
+            });
+            hasVoted = false;
+            updatePlayersList(data.players, false);
             updateCardsState(data.players);
         }
     };
@@ -143,15 +153,13 @@ function updatePlayersList(players, allVoted) {
         const playerCard = document.createElement('div');
         playerCard.className = 'col-md-4 mb-3';
         
-        let voteDisplay;
+        let voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
         if (player.has_voted) {
             if (allVoted) {
                 voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
             } else {
                 voteDisplay = '<span class="badge bg-info">Zagłosował</span>';
             }
-        } else {
-            voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
         }
         
         playerCard.innerHTML = `
@@ -171,6 +179,12 @@ function updatePlayersList(players, allVoted) {
         `;
         playersList.appendChild(playerCard);
     });
+
+    // DODANE: Odznacz kartę jeśli bieżący użytkownik nie zagłosował
+    const currentPlayer = players.find(p => p.nickname === nickname);
+    if (currentPlayer && !currentPlayer.has_voted) {
+        document.querySelectorAll('.poker-card').forEach(c => c.classList.remove('selected'));
+    }
 }
 
 function removePlayer(nicknameToRemove) {
@@ -232,11 +246,26 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.send(JSON.stringify({
             'action': 'reset'
         }));
+        
+        // Resetowanie stanu kart
         document.querySelectorAll('.poker-card').forEach(c => {
             c.classList.remove('selected');
             c.classList.remove('disabled');
         });
+        
+        // Resetowanie stanu głosowania
         hasVoted = false;
+        
+        // Aktualizacja wyświetlania graczy
+        const players = Array.from(document.querySelectorAll('.player-card')).map(card => {
+            const nickname = card.querySelector('.card-title').textContent;
+            return {
+                nickname: nickname,
+                has_voted: false,
+                vote: null
+            };
+        });
+        updatePlayersList(players, false);
     });
 });
 </script>
