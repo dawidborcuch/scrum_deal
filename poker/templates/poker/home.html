@@ -3,13 +3,15 @@
 {% block title %}ScrumDeal - Strona główna{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="text-center">Dołącz do stołu</h2>
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-primary text-white text-center">
+                <h2 class="mb-0">ScrumDeal</h2>
+                <small>Planowanie pokerowe dla zespołów Agile</small>
             </div>
             <div class="card-body">
+                <p class="text-center mb-4">Dołącz do stołu, aby rozpocząć lub dołączyć do rozgrywki. Wybierz nick, rolę i opcjonalnie zostań krupierem.</p>
                 <form id="joinForm" method="post" action="{% url 'poker:join_table' %}">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -40,7 +42,7 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Dołącz</button>
+                        <button type="submit" class="btn btn-primary btn-lg">Dołącz</button>
                     </div>
                 </form>
             </div>
