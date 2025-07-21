@@ -1,0 +1,243 @@
+{% extends 'poker/base.html' %}
+
+{% block title %}Plan It Poker - Stół {{ table_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        cursor: pointer;
+        transition: transform 0.2s;
+        margin-bottom: 10px;
+    }
+    .card:hover {
+        transform: scale(1.05);
+    }
+    .card.selected {
+        border: 3px solid #0d6efd;
+        background-color: #e7f1ff;
+        transform: scale(1.05);
+    }
+    .card.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    .player-card {
+        min-height: 100px;
+    }
+    .vote-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    #playersList {
+        min-height: 200px;
+    }
+    .vote-hidden {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+    .remove-player-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .player-card:hover .remove-player-btn {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Stół: {{ table_name }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="playersList">
+                        <!-- Gracze będą dodawani dynamicznie -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Twoje karty</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2" id="cardsContainer">
+                        {% for value in card_values %}
+                        <div class="col-6">
+                            <div class="card text-center poker-card" data-value="{{ value }}">
+                                <div class="card-body">
+                                    <span class="vote-value">{{ value }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button class="btn btn-danger" id="resetButton">Resetuj stół</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const tableName = "{{ table_name }}";
+const nickname = "{{ nickname }}";
+let socket = null;
+let hasVoted = false;
+
+function connectWebSocket() {
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws_path = `${ws_scheme}://${window.location.host}/ws/poker/${tableName}/`;
+    console.log('Próba połączenia WebSocket:', ws_path);
+    
+    socket = new WebSocket(ws_path);
+
+    socket.onopen = function(e) {
+        console.log('Połączenie WebSocket otwarte');
+        socket.send(JSON.stringify({
+            'action': 'join',
+            'nickname': nickname
+        }));
+    };
+
+    socket.onmessage = function(e) {
+        console.log('Otrzymano wiadomość:', e.data);
+        const data = JSON.parse(e.data);
+        if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'table_reset' || data.type === 'player_removed') {
+            console.log('Aktualizacja listy graczy:', data.players);
+            updatePlayersList(data.players, data.all_voted);
+            updateCardsState(data.players);
+        }
+    };
+
+    socket.onerror = function(e) {
+        console.error('Błąd WebSocket:', e);
+    };
+
+    socket.onclose = function(e) {
+        console.log('Połączenie WebSocket zamknięte:', e);
+        // Próba ponownego połączenia po 2 sekundach
+        setTimeout(connectWebSocket, 2000);
+    };
+}
+
+function updatePlayersList(players, allVoted) {
+    console.log('Aktualizacja listy graczy:', players);
+    const playersList = document.getElementById('playersList');
+    playersList.innerHTML = '';
+    
+    players.forEach(player => {
+        const playerCard = document.createElement('div');
+        playerCard.className = 'col-md-4 mb-3';
+        
+        let voteDisplay;
+        if (player.has_voted) {
+            if (allVoted) {
+                voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
+            } else {
+                voteDisplay = '<span class="badge bg-info">Zagłosował</span>';
+            }
+        } else {
+            voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
+        }
+        
+        playerCard.innerHTML = `
+            <div class="card player-card position-relative">
+                <button class="btn btn-sm btn-danger remove-player-btn" 
+                        onclick="removePlayer('${player.nickname}')"
+                        title="Usuń gracza">
+                    <i class="bi bi-x"></i>
+                </button>
+                <div class="card-body">
+                    <h5 class="card-title">${player.nickname}</h5>
+                    <p class="card-text">
+                        ${voteDisplay}
+                    </p>
+                </div>
+            </div>
+        `;
+        playersList.appendChild(playerCard);
+    });
+}
+
+function removePlayer(nicknameToRemove) {
+    if (confirm(`Czy na pewno chcesz usunąć gracza ${nicknameToRemove}?`)) {
+        console.log('Usuwanie gracza:', nicknameToRemove);
+        socket.send(JSON.stringify({
+            'action': 'remove_player',
+            'nickname_to_remove': nicknameToRemove
+        }));
+    }
+}
+
+function updateCardsState(players) {
+    console.log('Aktualizacja stanu kart:', players);
+    const currentPlayer = players.find(p => p.nickname === nickname);
+    console.log('Aktualny gracz:', currentPlayer);
+    
+    if (currentPlayer && currentPlayer.has_voted) {
+        console.log('Gracz już głosował');
+        hasVoted = true;
+        document.querySelectorAll('.poker-card').forEach(card => {
+            card.classList.add('disabled');
+        });
+    } else {
+        console.log('Gracz jeszcze nie głosował');
+        hasVoted = false;
+        document.querySelectorAll('.poker-card').forEach(card => {
+            card.classList.remove('disabled');
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    connectWebSocket();
+
+    document.querySelectorAll('.poker-card').forEach(card => {
+        card.addEventListener('click', function() {
+            console.log('Kliknięto kartę:', this.dataset.value);
+            if (hasVoted) {
+                console.log('Gracz już głosował, ignoruję kliknięcie');
+                return;
+            }
+            
+            const value = this.dataset.value;
+            document.querySelectorAll('.poker-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            console.log('Wysyłanie głosu:', value);
+            socket.send(JSON.stringify({
+                'action': 'vote',
+                'nickname': nickname,
+                'vote': parseInt(value)
+            }));
+        });
+    });
+
+    document.getElementById('resetButton').addEventListener('click', function() {
+        console.log('Resetowanie stołu');
+        socket.send(JSON.stringify({
+            'action': 'reset'
+        }));
+        document.querySelectorAll('.poker-card').forEach(c => {
+            c.classList.remove('selected');
+            c.classList.remove('disabled');
+        });
+        hasVoted = false;
+    });
+});
+</script>
+{% endblock %} 
