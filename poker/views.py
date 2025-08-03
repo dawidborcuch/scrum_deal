@@ -79,8 +79,28 @@ def join_table(request):
         nickname = request.POST.get('nickname')
         role = request.POST.get('role', 'participant')
         is_croupier = request.POST.get('is_croupier') == 'on'
+        is_joining_existing = request.POST.get('is_joining_existing') == 'on'  # Nowe pole
         if not table_name or not nickname:
             return redirect('poker:home')
+        
+        # Sprawdź czy stół już istnieje i ma aktywnych graczy (tylko przy tworzeniu nowego stołu)
+        from .consumers import ACTIVE_TABLES
+        import time
+        current_time = time.time()
+        
+        if not is_joining_existing and table_name in ACTIVE_TABLES:
+            table_info = ACTIVE_TABLES[table_name]
+            # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
+            if current_time - table_info['last_updated'] <= 300 and table_info['players']:
+                # Stół istnieje i ma aktywnych graczy - dodaj komunikat i przekieruj z powrotem
+                from django.contrib import messages
+                messages.error(request, f'Stół "{table_name}" już istnieje i ma aktywnych graczy. Wybierz inną nazwę stołu lub dołącz do istniejącego.')
+                # Zapisz dane w sesji, aby je przywrócić na stronie głównej
+                request.session['last_table_name'] = table_name
+                request.session['last_nickname'] = nickname
+                request.session['last_role'] = role
+                request.session['last_is_croupier'] = is_croupier
+                return redirect('poker:home')
         
         # Sprawdź czy nick jest już zajęty w cache
         table_data = cache.get(f'table_{table_name}')

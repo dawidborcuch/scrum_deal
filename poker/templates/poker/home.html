@@ -138,7 +138,7 @@
                 <small>Planowanie pokerowe dla zespołów Agile</small>
             </div>
             <div class="card-body">
-                <p class="text-center mb-4">Dołącz do stołu, aby rozpocząć lub dołączyć do rozgrywki. Wybierz nick, rolę i opcjonalnie zostań krupierem.</p>
+                <p class="text-center mb-4">Utwórz stół, aby rozpocząć. Wybierz nick, rolę i opcjonalnie zostań krupierem.</p>
                 <form id="joinForm" method="post" action="{% url 'poker:join_table' %}">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -181,7 +181,7 @@
                         </div>
                     </div>
                      <div class="d-grid">
-                         <button type="submit" class="btn btn-primary btn-lg">Dołącz</button>
+                         <button type="submit" class="btn btn-primary btn-lg">Utwórz</button>
                      </div>
                      <div class="text-center mt-3">
                          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="debugCache()">
@@ -277,9 +277,10 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="quickJoinForm" method="post" action="{% url 'poker:join_table' %}">
-                    {% csrf_token %}
-                    <input type="hidden" id="quickJoinTableName" name="table_name">
+                                 <form id="quickJoinForm" method="post" action="{% url 'poker:join_table' %}">
+                     {% csrf_token %}
+                     <input type="hidden" id="quickJoinTableName" name="table_name">
+                     <input type="hidden" name="is_joining_existing" value="on">
                     
                     <div class="mb-3">
                         <label for="quickJoinNickname" class="form-label">Twój nick</label>
@@ -454,8 +455,70 @@ function showNicknameError(message, nickname) {
     }, 5000);
 }
 
+// Funkcja do obsługi błędów istniejącego stołu
+function showTableExistsError(message) {
+    // Pokaż tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'tableExistsTooltip';
+    tooltip.className = 'alert alert-danger position-fixed';
+    tooltip.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    tooltip.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+            <div>
+                <strong>Błąd nazwy stołu</strong><br>
+                ${message}
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="closeTableExistsTooltip()"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Podświetl pole nazwy stołu na czerwono
+    const tableNameField = document.getElementById('tableName');
+    if (tableNameField) {
+        tableNameField.classList.add('is-invalid');
+        tableNameField.style.borderColor = '#dc3545';
+        tableNameField.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+        
+        // Dodaj event listener do usunięcia czerwonego podświetlenia
+        tableNameField.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
+        });
+    }
+    
+    // Auto-ukryj tooltip po 5 sekundach
+    setTimeout(() => {
+        closeTableExistsTooltip();
+    }, 5000);
+}
+
 function closeNicknameTooltip() {
     const tooltip = document.getElementById('nicknameTooltip');
+    if (tooltip) {
+        tooltip.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            if (tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+            }
+        }, 300);
+    }
+}
+
+function closeTableExistsTooltip() {
+    const tooltip = document.getElementById('tableExistsTooltip');
     if (tooltip) {
         tooltip.style.animation = 'slideOut 0.3s ease-in';
         setTimeout(() => {
@@ -502,6 +565,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Ukryj oryginalny komunikat Django (już jest ukryty, ale dla pewności)
                 message.style.display = 'none';
             }
+        } else if (messageText.includes('już istnieje')) {
+            // Błąd istniejącego stołu
+            showTableExistsError(messageText);
+            // Ukryj oryginalny komunikat Django
+            message.style.display = 'none';
         }
     });
     
@@ -531,6 +599,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 }
+            } else if (messageText.includes('już istnieje')) {
+                // Podświetl pole nazwy stołu na czerwono
+                tableNameField.classList.add('is-invalid');
+                tableNameField.style.borderColor = '#dc3545';
+                tableNameField.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+                
+                // Dodaj event listener do usunięcia czerwonego podświetlenia
+                tableNameField.addEventListener('input', function() {
+                    this.classList.remove('is-invalid');
+                    this.style.borderColor = '';
+                    this.style.boxShadow = '';
+                });
             }
         }
         
