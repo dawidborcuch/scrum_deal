@@ -591,20 +591,31 @@ function updatePlayersList(players, allVoted) {
         label.className = 'col-12';
         label.innerHTML = '<h5 class="text-muted">Obserwatorzy</h5>';
         observersSection.appendChild(label);
-        observers.forEach(observer => {
-            let croupierBadge = observer.is_croupier ? '<span class="badge bg-primary ms-2">Krupier</span>' : '';
-            const observerCard = document.createElement('div');
-            observerCard.className = 'col-md-3 mb-2';
-            observerCard.innerHTML = `
-                <div class="card player-card bg-light">
-                    <div class="card-body text-center">
-                        <span class="fw-bold">${observer.nickname} ${croupierBadge}</span><br>
-                        <span class="badge bg-secondary">Obserwator</span>
-                    </div>
-                </div>
+            observers.forEach(observer => {
+        let croupierBadge = observer.is_croupier ? '<span class="badge bg-primary ms-2">Krupier</span>' : '';
+        
+        // Przyciski tylko dla krupiera i nie przy własnej karcie
+        let actionBtns = '';
+        if (isCroupierNow && observer.nickname !== nickname) {
+            actionBtns = `
+                <button class='assign-croupier-btn' onclick='assignCroupier("${observer.nickname}")' title='Przekaż rolę krupiera'>⋮</button>
+                <button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${observer.nickname}")' title='Usuń gracza'>X</button>
             `;
-            observersSection.appendChild(observerCard);
-        });
+        }
+        
+        const observerCard = document.createElement('div');
+        observerCard.className = 'col-md-3 mb-2';
+        observerCard.innerHTML = `
+            <div class="card player-card bg-light position-relative">
+                ${actionBtns}
+                <div class="card-body text-center">
+                    <span class="fw-bold">${observer.nickname} ${croupierBadge}</span><br>
+                    <span class="badge bg-secondary">Obserwator</span>
+                </div>
+            </div>
+        `;
+        observersSection.appendChild(observerCard);
+    });
     }
 
     // DODANE: Odznacz kartę jeśli bieżący użytkownik nie zagłosował
