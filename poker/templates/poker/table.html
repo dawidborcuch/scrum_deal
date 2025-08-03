@@ -10,11 +10,67 @@
         margin-bottom: 10px;
         border-radius: 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        min-height: 80px;
+    }
+    
+    /* Responsywność dla urządzeń mobilnych */
+    @media (max-width: 768px) {
+        .card.poker-card {
+            min-height: 60px;
+            margin-bottom: 8px;
+        }
+        .vote-value {
+            font-size: 1.5rem !important;
+        }
+        .player-card {
+            min-height: 80px;
+            margin-bottom: 10px;
+        }
+        .col-md-4 {
+            margin-bottom: 10px;
+        }
+        .col-md-3 {
+            margin-bottom: 8px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .vote-value {
+            font-size: 1.2rem !important;
+        }
+        .card.poker-card {
+            min-height: 50px;
+        }
     }
     .card.poker-card.selected {
         border: 3px solid #FF6600;
         background-color: #fff3e6;
         transform: scale(1.05);
+        animation: cardPulse 0.6s ease-in-out;
+    }
+    
+    @keyframes cardPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1.05); }
+    }
+    
+    .card.poker-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card.poker-card:hover:not(.disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 102, 0, 0.2);
+    }
+    
+    .player-card {
+        transition: all 0.3s ease;
+    }
+    
+    .player-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .card.poker-card.disabled {
         opacity: 0.6;
@@ -115,7 +171,12 @@
                     <div class="row g-2" id="cardsContainer">
                         {% for value in card_values %}
                         <div class="col-6">
-                            <div class="card text-center poker-card" data-value="{{ value }}">
+                            <div class="card text-center poker-card" 
+                                 data-value="{{ value }}" 
+                                 tabindex="0" 
+                                 role="button" 
+                                 aria-label="Wybierz kartę o wartości {{ value }}"
+                                 onkeydown="handleCardKeydown(event, {{ value }})">
                                 <div class="card-body">
                                     <span class="vote-value">{{ value }}</span>
                                 </div>
@@ -125,7 +186,34 @@
                     </div>
                     <div class="d-grid gap-2 mt-3">
                         <button class="btn btn-danger btn-lg" id="resetButton">Resetuj stół</button>
+                        <button class="btn btn-info btn-lg" id="statsButton" style="display: none;">Statystyki</button>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Modal dla statystyk -->
+            <div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="statsModalLabel">Statystyki głosowań</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                                                                          <div class="modal-body">
+                             <div class="row">
+                                 <div class="col-12 text-center">
+                                     <h6>Średnia głosów</h6>
+                                     <p id="averageVote" class="h4 text-primary">-</p>
+                                 </div>
+                             </div>
+                             <div class="mt-3">
+                                 <h6>Rozkład głosów</h6>
+                                 <div id="voteDistribution"></div>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div>
@@ -141,6 +229,66 @@ const role = "{{ role }}";
 const isCroupier = "{{ is_croupier|yesno:'true,false' }}";
 let socket = null;
 let hasVoted = false;
+
+// Keyboard navigation function
+function handleCardKeydown(event, value) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        const card = event.target.closest('.poker-card');
+        if (card && !card.classList.contains('disabled')) {
+            card.click();
+        }
+    }
+}
+
+// Statistics functions
+function calculateStats(players) {
+    const votes = players
+        .filter(p => p.has_voted && p.vote !== null)
+        .map(p => p.vote);
+    
+    if (votes.length === 0) return null;
+    
+    const average = (votes.reduce((a, b) => a + b, 0) / votes.length).toFixed(1);
+    
+    return {
+        average,
+        totalVotes: votes.length
+    };
+}
+
+function showStats(players) {
+    const stats = calculateStats(players);
+    if (!stats) return;
+    
+    document.getElementById('averageVote').textContent = stats.average;
+    
+    // Show vote distribution
+    const distributionDiv = document.getElementById('voteDistribution');
+    distributionDiv.innerHTML = '';
+    
+    // Count votes
+    const voteCount = {};
+    players.filter(p => p.has_voted && p.vote !== null).forEach(p => {
+        voteCount[p.vote] = (voteCount[p.vote] || 0) + 1;
+    });
+    
+    Object.entries(voteCount).forEach(([vote, count]) => {
+        const percentage = ((count / stats.totalVotes) * 100).toFixed(1);
+        const bar = document.createElement('div');
+        bar.className = 'mb-2';
+        bar.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <span>${vote}</span>
+                <span>${count} (${percentage}%)</span>
+            </div>
+            <div class="progress" style="height: 20px;">
+                <div class="progress-bar bg-primary" style="width: ${percentage}%"></div>
+            </div>
+        `;
+        distributionDiv.appendChild(bar);
+    });
+}
 
 function connectWebSocket() {
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -200,6 +348,9 @@ function connectWebSocket() {
 
 function updatePlayersList(players, allVoted) {
     console.log('Aktualizacja listy graczy:', players);
+    // Zapisz aktualny stan graczy dla statystyk
+    window.lastPlayers = players;
+    
     const playersList = document.getElementById('playersList');
     playersList.innerHTML = '';
     // Ustaw isCroupier dynamicznie na podstawie danych z backendu (na początek funkcji!)
@@ -289,10 +440,14 @@ function updatePlayersList(players, allVoted) {
     if (currentPlayer && !currentPlayer.has_voted) {
         document.querySelectorAll('.poker-card').forEach(c => c.classList.remove('selected'));
     }
-    // Pokaż/ukryj przycisk resetu
+    // Pokaż/ukryj przyciski
     const resetBtn = document.getElementById('resetButton');
+    const statsBtn = document.getElementById('statsButton');
     if (resetBtn) {
         resetBtn.style.display = isCroupierNow ? '' : 'none';
+    }
+    if (statsBtn) {
+        statsBtn.style.display = allVoted ? '' : 'none';
     }
     // Dodaj menu kontekstowe tylko jeśli jesteś krupierem
     if (isCroupierNow) {
@@ -404,6 +559,14 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
         updatePlayersList(players, false);
+    });
+    
+    document.getElementById('statsButton').addEventListener('click', function() {
+        // Pobierz aktualnych graczy z DOM lub z ostatniego stanu
+        const currentPlayers = window.lastPlayers || [];
+        showStats(currentPlayers);
+        const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+        statsModal.show();
     });
 
     // Ukryj przycisk resetu jeśli nie jesteś krupierem
