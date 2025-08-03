@@ -360,6 +360,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+        
+        // WAŻNE: Sprawdź dostępność krupiera po przywróceniu formularza z sesji
+        // To zapobiega odblokowaniu opcji krupiera po błędzie duplikacji nicku
+        if (tableNameField.value) {
+            checkCroupierAvailability();
+        }
     }
 });
 
