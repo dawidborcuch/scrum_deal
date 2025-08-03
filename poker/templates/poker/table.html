@@ -12,8 +12,8 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.07);
     }
     .card.poker-card.selected {
-        border: 3px solid #0d6efd;
-        background-color: #e7f1ff;
+        border: 3px solid #FF6600;
+        background-color: #fff3e6;
         transform: scale(1.05);
     }
     .card.poker-card.disabled {
@@ -32,7 +32,7 @@
     .vote-value {
         font-size: 2rem;
         font-weight: bold;
-        color: #0d6efd;
+        color: #FF6600;
     }
     #playersList {
         min-height: 200px;
@@ -55,17 +55,18 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: #e7f1ff;
+        background: #fff3e6;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        color: #0d6efd;
+        color: #FF6600;
         margin-right: 10px;
         font-size: 1.2em;
     }
     .badge.bg-primary {
-        background-color: #0d6efd !important;
+        background-color: #000000 !important;
+        color: #FF6600 !important;
     }
     .badge.bg-success {
         background-color: #198754 !important;
@@ -80,6 +81,12 @@
     }
     .badge.bg-secondary {
         background-color: #6c757d !important;
+    }
+    
+    /* Większa czcionka dla wyniku głosowania */
+    .badge.bg-success {
+        font-size: 1.1em !important;
+        font-weight: bold !important;
     }
 </style>
 {% endblock %}
@@ -213,12 +220,16 @@ function updatePlayersList(players, allVoted) {
         
         let voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
         if (player.has_voted) {
+            // Sprawdź czy nick kończy się na 'a' dla odpowiedniej odmiany
+            const isFemale = player.nickname.toLowerCase().endsWith('a');
+            const voteText = isFemale ? 'Zagłosowała' : 'Zagłosował';
+            
             if (role === 'observer') {
-                voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
+                voteDisplay = `<span class="badge bg-success">${voteText}: ${player.vote}</span>`;
             } else if (allVoted) {
-                voteDisplay = `<span class="badge bg-success">Zagłosował: ${player.vote}</span>`;
+                voteDisplay = `<span class="badge bg-success">${voteText}: ${player.vote}</span>`;
             } else {
-                voteDisplay = '<span class="badge bg-info">Zagłosował</span>';
+                voteDisplay = `<span class="badge bg-info">${voteText}</span>`;
             }
         }
         
