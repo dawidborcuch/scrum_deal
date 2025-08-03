@@ -141,6 +141,7 @@
                 <p class="text-center mb-4">Utwórz stół, aby rozpocząć. Wybierz nick, rolę i opcjonalnie zostań krupierem.</p>
                 <form id="joinForm" method="post" action="{% url 'poker:join_table' %}">
                     {% csrf_token %}
+                    <input type="hidden" name="is_joining_existing" value="off">
                     <div class="mb-3">
                         <label for="tableName" class="form-label">Nazwa stołu</label>
                         <input type="text" class="form-control" id="tableName" name="table_name" value="{{ last_table_name|default:'' }}" required>
@@ -179,6 +180,25 @@
                                data-bs-placement="top" 
                                title="Może zarządzać stołem: resetować głosy, usuwać graczy, przekazywać rolę krupiera"></i>
                         </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enablePassword" name="enable_password">
+                            <label class="form-check-label" for="enablePassword">
+                                <i class="fas fa-lock me-1"></i>Hasło do stołu
+                            </label>
+                            <i class="fas fa-question-circle text-muted ms-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="Opcjonalne hasło chroniące dostęp do stołu"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="passwordField" style="display: none;">
+                        <label for="tablePassword" class="form-label">Hasło do stołu</label>
+                        <input type="password" class="form-control" id="tablePassword" name="table_password" value="{{ last_table_password|default:'' }}" placeholder="Wprowadź hasło">
+                        <div class="form-text">Hasło będzie wymagane przy dołączaniu do tego stołu</div>
                     </div>
                      <div class="d-grid">
                          <button type="submit" class="btn btn-primary btn-lg">Utwórz</button>
@@ -318,6 +338,12 @@
                         </div>
                     </div>
                     
+                    <div class="mb-3" id="quickPasswordField" style="display: none;">
+                        <label for="quickTablePassword" class="form-label">Hasło do stołu</label>
+                        <input type="password" class="form-control" id="quickTablePassword" name="table_password" placeholder="Wprowadź hasło" required>
+                        <div class="form-text">Ten stół jest chroniony hasłem</div>
+                    </div>
+                    
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-sign-in-alt me-1"></i>Dołącz
@@ -368,6 +394,9 @@ function showQuickJoinModal(tableName, button) {
     // Sprawdź dostępność krupiera dla tego stołu
     checkQuickJoinCroupierAvailability();
     
+    // Sprawdź czy stół ma hasło
+    checkTablePassword(tableName);
+    
     // Pokaż modal
     const modal = new bootstrap.Modal(document.getElementById('quickJoinModal'));
     modal.show();
@@ -382,6 +411,48 @@ function showQuickJoinModal(tableName, button) {
         // Zaznacz pole nicku
         document.getElementById('quickJoinNickname').focus();
     }, 300);
+}
+
+// Obsługa suwaka hasła w głównym formularzu
+document.addEventListener('DOMContentLoaded', function() {
+    const enablePasswordCheckbox = document.getElementById('enablePassword');
+    const passwordField = document.getElementById('passwordField');
+    const tablePasswordInput = document.getElementById('tablePassword');
+    
+    if (enablePasswordCheckbox && passwordField) {
+        enablePasswordCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                passwordField.style.display = 'block';
+                tablePasswordInput.required = true;
+            } else {
+                passwordField.style.display = 'none';
+                tablePasswordInput.required = false;
+                tablePasswordInput.value = '';
+            }
+        });
+    }
+});
+
+function checkTablePassword(tableName) {
+    // Sprawdź czy stół ma hasło
+    fetch(`/check_table_password/${encodeURIComponent(tableName)}/`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.has_password) {
+                document.getElementById('quickPasswordField').style.display = 'block';
+                document.getElementById('quickTablePassword').required = true;
+            } else {
+                document.getElementById('quickPasswordField').style.display = 'none';
+                document.getElementById('quickTablePassword').required = false;
+                document.getElementById('quickTablePassword').value = '';
+            }
+        })
+        .catch(error => {
+            console.error('Błąd podczas sprawdzania hasła stołu:', error);
+            // W przypadku błędu ukryj pole hasła
+            document.getElementById('quickPasswordField').style.display = 'none';
+            document.getElementById('quickTablePassword').required = false;
+        });
 }
 
 function joinTable(tableName) {
@@ -503,6 +574,56 @@ function showTableExistsError(message) {
     }, 5000);
 }
 
+// Funkcja do obsługi błędów hasła
+function showPasswordError(message) {
+    // Pokaż tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'passwordTooltip';
+    tooltip.className = 'alert alert-danger position-fixed';
+    tooltip.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    tooltip.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas fa-lock me-2 mt-1"></i>
+            <div>
+                <strong>Błąd hasła</strong><br>
+                ${message}
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="closePasswordTooltip()"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Podświetl pole hasła na czerwono (jeśli istnieje)
+    const passwordField = document.getElementById('quickTablePassword');
+    if (passwordField) {
+        passwordField.classList.add('is-invalid');
+        passwordField.style.borderColor = '#dc3545';
+        passwordField.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+        
+        // Dodaj event listener do usunięcia czerwonego podświetlenia
+        passwordField.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
+        });
+    }
+    
+    // Auto-ukryj tooltip po 5 sekundach
+    setTimeout(() => {
+        closePasswordTooltip();
+    }, 5000);
+}
+
 function closeNicknameTooltip() {
     const tooltip = document.getElementById('nicknameTooltip');
     if (tooltip) {
@@ -517,6 +638,18 @@ function closeNicknameTooltip() {
 
 function closeTableExistsTooltip() {
     const tooltip = document.getElementById('tableExistsTooltip');
+    if (tooltip) {
+        tooltip.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            if (tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+            }
+        }, 300);
+    }
+}
+
+function closePasswordTooltip() {
+    const tooltip = document.getElementById('passwordTooltip');
     if (tooltip) {
         tooltip.style.animation = 'slideOut 0.3s ease-in';
         setTimeout(() => {
@@ -568,6 +701,11 @@ document.addEventListener('DOMContentLoaded', function() {
             showTableExistsError(messageText);
             // Ukryj oryginalny komunikat Django
             message.style.display = 'none';
+        } else if (messageText.includes('Nieprawidłowe hasło')) {
+            // Błąd nieprawidłowego hasła
+            showPasswordError(messageText);
+            // Ukryj oryginalny komunikat Django
+            message.style.display = 'none';
         }
     });
     
@@ -616,6 +754,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // To zapobiega odblokowaniu opcji krupiera po błędzie duplikacji nicku
         if (tableNameField.value) {
             checkCroupierAvailability();
+        }
+        
+        // Sprawdź czy hasło zostało przywrócone z sesji i pokaż pole hasła
+        const passwordField = document.getElementById('passwordField');
+        const enablePasswordCheckbox = document.getElementById('enablePassword');
+        const tablePasswordInput = document.getElementById('tablePassword');
+        if (passwordField && enablePasswordCheckbox && tablePasswordInput && tablePasswordInput.value) {
+            // Jeśli hasło zostało przywrócone, pokaż pole hasła i zaznacz checkbox
+            enablePasswordCheckbox.checked = true;
+            passwordField.style.display = 'block';
+            tablePasswordInput.required = true;
         }
     }
 });

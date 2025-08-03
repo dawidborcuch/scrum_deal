@@ -15,18 +15,20 @@ class HomeView(TemplateView):
         active_tables = self.get_active_tables()
         context['active_tables'] = active_tables
         
-        # Przywróć wartości z sesji, jeśli istnieją (po błędzie duplikacji nicku)
+        # Przywróć wartości z sesji, jeśli istnieją (po błędzie duplikacji nicku lub hasła)
         request = self.request
         if 'last_table_name' in request.session:
             context['last_table_name'] = request.session['last_table_name']
             context['last_nickname'] = request.session.get('last_nickname', '')
             context['last_role'] = request.session.get('last_role', 'participant')
             context['last_is_croupier'] = request.session.get('last_is_croupier', False)
+            context['last_table_password'] = request.session.get('last_table_password', '')
             # Wyczyść sesję po użyciu
-            del request.session['last_table_name']
-            del request.session['last_nickname']
-            del request.session['last_role']
-            del request.session['last_is_croupier']
+            request.session.pop('last_table_name', None)
+            request.session.pop('last_nickname', None)
+            request.session.pop('last_role', None)
+            request.session.pop('last_is_croupier', None)
+            request.session.pop('last_table_password', None)
         
         return context
     
@@ -80,6 +82,9 @@ def join_table(request):
         role = request.POST.get('role', 'participant')
         is_croupier = request.POST.get('is_croupier') == 'on'
         is_joining_existing = request.POST.get('is_joining_existing') == 'on'  # Nowe pole
+        table_password = request.POST.get('table_password', '')  # Hasło do stołu
+        enable_password = request.POST.get('enable_password') == 'on'  # Czy włączono hasło przy tworzeniu
+        
         if not table_name or not nickname:
             return redirect('poker:home')
         
@@ -116,11 +121,44 @@ def join_table(request):
                 request.session['last_role'] = role
                 request.session['last_is_croupier'] = is_croupier
                 return redirect('poker:home')
+            
+            # Sprawdź hasło przy dołączaniu do istniejącego stołu
+            if is_joining_existing and table_data.get('password'):
+                if not table_password or table_password != table_data['password']:
+                    from django.contrib import messages
+                    messages.error(request, f'Nieprawidłowe hasło do stołu "{table_name}".')
+                    # Zapisz dane w sesji
+                    request.session['last_table_name'] = table_name
+                    request.session['last_nickname'] = nickname
+                    request.session['last_role'] = role
+                    request.session['last_is_croupier'] = is_croupier
+                    request.session['last_table_password'] = table_password
+                    return redirect('poker:home')
         
         # Nick jest dostępny - zapisz w sesji i przekieruj do stołu
         request.session['nickname'] = nickname
         request.session['role'] = role
         request.session['is_croupier'] = is_croupier
+        
+        # Jeśli tworzysz nowy stół i włączono hasło, zapisz je w cache i ACTIVE_TABLES
+        if not is_joining_existing and enable_password and table_password:
+            # Zapisz hasło w cache dla nowego stołu
+            if not table_data:
+                table_data = {'players': [], 'password': table_password}
+            else:
+                table_data['password'] = table_password
+            cache.set(f'table_{table_name}', table_data, 3600)  # Cache na 1 godzinę
+            
+            # Dodaj stół do ACTIVE_TABLES z hasłem (jeśli jeszcze nie istnieje)
+            from .consumers import ACTIVE_TABLES
+            import time
+            if table_name not in ACTIVE_TABLES:
+                ACTIVE_TABLES[table_name] = {
+                    'players': [],
+                    'last_updated': time.time(),
+                    'password': table_password
+                }
+        
         return redirect(reverse('poker:table', args=[table_name]))
     return redirect('poker:home')
 
@@ -144,6 +182,24 @@ def check_croupier(request, table_name):
     if table_data:
         croupier_exists = any(p.get('is_croupier', False) for p in table_data.get('players', []))
     return JsonResponse({'croupier_exists': croupier_exists})
+
+def check_table_password(request, table_name):
+    """API endpoint do sprawdzania czy stół ma hasło"""
+    # Sprawdź najpierw w cache
+    table_data = cache.get(f'table_{table_name}')
+    has_password = False
+    if table_data:
+        password = table_data.get('password')
+        has_password = bool(password) and password != ""
+    
+    # Jeśli nie ma w cache, sprawdź w ACTIVE_TABLES
+    if not has_password:
+        from .consumers import ACTIVE_TABLES
+        if table_name in ACTIVE_TABLES:
+            password = ACTIVE_TABLES[table_name].get('password')
+            has_password = bool(password) and password != ""
+    
+    return JsonResponse({'has_password': has_password})
 
 def get_active_tables_api(request):
     """API endpoint do pobierania aktywnych stołów"""

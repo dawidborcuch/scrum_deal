@@ -60,9 +60,12 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 
                 # Aktualizuj globalną listę aktywnych stołów
                 if players_data:
+                    # Zachowaj hasło jeśli istnieje
+                    existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
                     ACTIVE_TABLES[self.table_name] = {
                         'players': players_data,
-                        'last_updated': time.time()
+                        'last_updated': time.time(),
+                        'password': existing_password
                     }
                 else:
                     # Usuń stół z globalnej listy jeśli nie ma graczy
@@ -172,7 +175,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
         # Aktualizuj globalną listę aktywnych stołów
         ACTIVE_TABLES[self.table_name] = {
             'players': players_data,
-            'last_updated': time.time()
+            'last_updated': time.time(),
+            'password': table_data.get('password')  # Dodaj hasło do globalnej listy
         }
         
         logger.info(f"Gracz {nickname} dołączył do stołu {self.table_name} jako {role} (krupier: {self.is_croupier})")
@@ -221,9 +225,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
+        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
         ACTIVE_TABLES[self.table_name] = {
             'players': players_data,
-            'last_updated': time.time()
+            'last_updated': time.time(),
+            'password': existing_password
         }
         
         logger.info(f"Gracz {nickname} zagłosował {vote} na stole {self.table_name}")
@@ -264,6 +270,15 @@ class PokerConsumer(AsyncWebsocketConsumer):
             player['vote'] = None
 
         await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
+        ACTIVE_TABLES[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time(),
+            'password': existing_password
+        }
+        
         logger.info(f"Zresetowano stół {self.table_name}")
 
         await self.channel_layer.group_send(
@@ -292,9 +307,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
         
         # Aktualizuj globalną listę aktywnych stołów
         if players_data:
+            existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
             ACTIVE_TABLES[self.table_name] = {
                 'players': players_data,
-                'last_updated': time.time()
+                'last_updated': time.time(),
+                'password': existing_password
             }
         else:
             # Usuń stół z globalnej listy jeśli nie ma graczy
@@ -332,9 +349,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
+        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
         ACTIVE_TABLES[self.table_name] = {
             'players': players_data,
-            'last_updated': time.time()
+            'last_updated': time.time(),
+            'password': existing_password
         }
         
         logger.info(f"Rola krupiera została przekazana graczowi {nickname_to_assign} przy stole {self.table_name}")
@@ -402,9 +421,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
+        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
         ACTIVE_TABLES[self.table_name] = {
             'players': players_data,
-            'last_updated': time.time()
+            'last_updated': time.time(),
+            'password': existing_password
         }
         
         logger.info(f"Gracz {self.nickname} otrzymał rolę krupiera przy stole {self.table_name}")
@@ -493,6 +514,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
             table_data = {
                 'players': []
             }
+            # Sprawdź czy stół istnieje w ACTIVE_TABLES i ma hasło
+            if self.table_name in ACTIVE_TABLES:
+                existing_password = ACTIVE_TABLES[self.table_name].get('password')
+                if existing_password:
+                    table_data['password'] = existing_password
             cache.set(f'table_{self.table_name}', table_data)
         return table_data
 
@@ -522,9 +548,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
             await self.save_table_data(table_data)
             
             # Aktualizuj globalną listę aktywnych stołów
+            existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
             ACTIVE_TABLES[self.table_name] = {
                 'players': players_data,
-                'last_updated': time.time()
+                'last_updated': time.time(),
+                'password': existing_password
             }
             
             logger.info(f"Zaktualizowano aktywność gracza {nickname} na stole {self.table_name}") 
