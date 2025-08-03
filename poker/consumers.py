@@ -95,6 +95,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.handle_remove_player(data)
             elif action == 'assign_croupier':
                 await self.handle_assign_croupier(data)
+            elif action == 'ping_activity':
+                await self.handle_ping_activity(data)
         except Exception as e:
             logger.error(f"Błąd podczas przetwarzania wiadomości: {str(e)}")
             await self.send(text_data=json.dumps({
@@ -143,7 +145,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
             'has_voted': False,
             'vote': None,
             'role': role,
-            'is_croupier': self.is_croupier
+            'is_croupier': self.is_croupier,
+            'last_activity': time.time()  # Dodaj czas ostatniej aktywności
         })
         table_data['players'] = players_data
         await self.save_table_data(table_data)
@@ -385,4 +388,29 @@ class PokerConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_table_data(self, table_data):
-        cache.set(f'table_{self.table_name}', table_data) 
+        cache.set(f'table_{self.table_name}', table_data)
+
+    async def handle_ping_activity(self, data):
+        """Obsługa pingowania aktywności użytkownika"""
+        nickname = data.get('nickname')
+        if not nickname:
+            return
+        
+        # Zaktualizuj czas aktywności gracza
+        table_data = await self.get_table_data()
+        if table_data:
+            players_data = table_data.get('players', [])
+            for player in players_data:
+                if player['nickname'] == nickname:
+                    player['last_activity'] = time.time()
+                    break
+            
+            await self.save_table_data(table_data)
+            
+            # Aktualizuj globalną listę aktywnych stołów
+            ACTIVE_TABLES[self.table_name] = {
+                'players': players_data,
+                'last_updated': time.time()
+            }
+            
+            logger.info(f"Zaktualizowano aktywność gracza {nickname} na stole {self.table_name}") 

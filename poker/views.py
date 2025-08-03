@@ -169,3 +169,28 @@ def get_active_tables_api(request):
             'current_time': current_time
         }
     })
+
+def ping_activity(request, table_name):
+    """Endpoint do pingowania aktywności użytkownika"""
+    if request.method == 'POST':
+        nickname = request.POST.get('nickname')
+        if not nickname:
+            return JsonResponse({'success': False, 'error': 'Brak nicku'})
+        
+        # Zaktualizuj czas aktywności w cache
+        from .consumers import ACTIVE_TABLES
+        import time
+        
+        if table_name in ACTIVE_TABLES:
+            # Znajdź gracza i zaktualizuj jego czas aktywności
+            for player in ACTIVE_TABLES[table_name]['players']:
+                if player.get('nickname') == nickname:
+                    player['last_activity'] = time.time()
+                    break
+            
+            # Zaktualizuj czas ostatniej aktywności stołu
+            ACTIVE_TABLES[table_name]['last_updated'] = time.time()
+        
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'success': False, 'error': 'Nieprawidłowa metoda'})

@@ -259,35 +259,64 @@
                  </div>
              </div>
              
-             <!-- Modal dla potwierdzenia przekazania roli krupiera -->
-             <div class="modal fade" id="assignCroupierModal" tabindex="-1" aria-labelledby="assignCroupierModalLabel" aria-hidden="true">
-                 <div class="modal-dialog">
-                     <div class="modal-content">
-                         <div class="modal-header">
-                             <h5 class="modal-title" id="assignCroupierModalLabel">
-                                 <i class="fas fa-crown text-warning me-2"></i>
-                                 Przekaż rolę krupiera
-                             </h5>
-                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                         </div>
-                         <div class="modal-body text-center">
-                             <div class="mb-3">
-                                 <i class="fas fa-user-tie fa-3x text-primary mb-3"></i>
-                                 <p class="lead">Czy na pewno chcesz przekazać rolę krupiera graczowi <strong id="assignCroupierNickname"></strong>?</p>
-                                 <p class="text-muted">Ta akcja nie może być cofnięta.</p>
-                             </div>
-                         </div>
-                         <div class="modal-footer">
-                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                 <i class="fas fa-times me-1"></i>Anuluj
-                             </button>
-                             <button type="button" class="btn btn-warning" id="confirmAssignCroupier">
-                                 <i class="fas fa-crown me-1"></i>Przekaż rolę
-                             </button>
-                         </div>
-                     </div>
-                 </div>
-             </div>
+                           <!-- Modal dla potwierdzenia przekazania roli krupiera -->
+              <div class="modal fade" id="assignCroupierModal" tabindex="-1" aria-labelledby="assignCroupierModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                      <div class="modal-content">
+                          <div class="modal-header">
+                              <h5 class="modal-title" id="assignCroupierModalLabel">
+                                  <i class="fas fa-crown text-warning me-2"></i>
+                                  Przekaż rolę krupiera
+                              </h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body text-center">
+                              <div class="mb-3">
+                                  <i class="fas fa-user-tie fa-3x text-primary mb-3"></i>
+                                  <p class="lead">Czy na pewno chcesz przekazać rolę krupiera graczowi <strong id="assignCroupierNickname"></strong>?</p>
+                                  <p class="text-muted">Ta akcja nie może być cofnięta.</p>
+                              </div>
+                          </div>
+                          <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                  <i class="fas fa-times me-1"></i>Anuluj
+                              </button>
+                              <button type="button" class="btn btn-warning" id="confirmAssignCroupier">
+                                  <i class="fas fa-crown me-1"></i>Przekaż rolę
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              
+              <!-- Modal dla ostrzeżenia o nieaktywności -->
+              <div class="modal fade" id="inactivityModal" tabindex="-1" aria-labelledby="inactivityModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                  <div class="modal-dialog">
+                      <div class="modal-content">
+                          <div class="modal-header bg-warning">
+                              <h5 class="modal-title" id="inactivityModalLabel">
+                                  <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                  Ostrzeżenie o nieaktywności
+                              </h5>
+                          </div>
+                          <div class="modal-body text-center">
+                              <div class="mb-3">
+                                  <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                                  <p class="lead">Nie wykryto aktywności przez 25 minut!</p>
+                                  <p class="text-muted">Kliknij "Jestem aktywny" w ciągu <strong id="inactivityCountdown">5:00</strong>, aby pozostać przy stole.</p>
+                                  <div class="progress mb-3">
+                                      <div class="progress-bar bg-warning" id="inactivityProgress" style="width: 100%"></div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="modal-footer">
+                              <button type="button" class="btn btn-success btn-lg" id="confirmActivity">
+                                  <i class="fas fa-check me-1"></i>Jestem aktywny
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
                 </div>
             </div>
         </div>
@@ -442,6 +471,9 @@ function connectWebSocket() {
             'role': role,
             'is_croupier': isCroupier === 'true'
         }));
+        
+        // Ping aktywności po połączeniu
+        pingActivity();
     };
 
     socket.onmessage = function(e) {
@@ -606,7 +638,13 @@ function removePlayer(nicknameToRemove) {
             'action': 'remove_player',
             'nickname_to_remove': nicknameToRemove
         }));
+        
+        // Ping aktywności po usunięciu gracza
+        pingActivity();
     }
+    
+    // Ping aktywności po kliknięciu przycisku usuwania gracza
+    pingActivity();
 }
 
 function assignCroupier(nicknameToAssign) {
@@ -619,6 +657,9 @@ function assignCroupier(nicknameToAssign) {
     
     // Zapisz nick do przekazania w globalnej zmiennej
     window.nicknameToAssign = nicknameToAssign;
+    
+    // Ping aktywności po kliknięciu przycisku przekazania roli
+    pingActivity();
 }
 
 function updateCardsState(players, allVotedParam) {
@@ -681,6 +722,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 'nickname': nickname,
                 'vote': parseInt(value)
             }));
+            
+            // Ping aktywności po głosowaniu
+            pingActivity();
         });
     });
 
@@ -690,6 +734,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'action': 'reset',
             'is_croupier': true // zawsze próbujemy, backend i tak sprawdzi
         }));
+        
+        // Ping aktywności po resetowaniu
+        pingActivity();
         
         // Resetowanie stanu kart
         document.querySelectorAll('.poker-card').forEach(c => {
@@ -712,32 +759,38 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePlayersList(players, false);
     });
     
-         document.getElementById('statsButton').addEventListener('click', function() {
-         // Pobierz aktualnych graczy z DOM lub z ostatniego stanu
-         const currentPlayers = window.lastPlayers || [];
-         showStats(currentPlayers);
-         const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
-         statsModal.show();
-     });
+                   document.getElementById('statsButton').addEventListener('click', function() {
+          // Pobierz aktualnych graczy z DOM lub z ostatniego stanu
+          const currentPlayers = window.lastPlayers || [];
+          showStats(currentPlayers);
+          const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+          statsModal.show();
+          
+          // Ping aktywności po otwarciu statystyk
+          pingActivity();
+      });
      
-     // Event listener dla potwierdzenia przekazania roli krupiera
-     document.getElementById('confirmAssignCroupier').addEventListener('click', function() {
-         const nicknameToAssign = window.nicknameToAssign;
-         if (nicknameToAssign) {
-             console.log('Przekazywanie roli krupiera:', nicknameToAssign);
-             socket.send(JSON.stringify({
-                 'action': 'assign_croupier',
-                 'nickname_to_assign': nicknameToAssign
-             }));
-             
-             // Zamknij modal
-             const modal = bootstrap.Modal.getInstance(document.getElementById('assignCroupierModal'));
-             modal.hide();
-             
-             // Wyczyść globalną zmienną
-             window.nicknameToAssign = null;
-         }
-     });
+           // Event listener dla potwierdzenia przekazania roli krupiera
+      document.getElementById('confirmAssignCroupier').addEventListener('click', function() {
+          const nicknameToAssign = window.nicknameToAssign;
+          if (nicknameToAssign) {
+              console.log('Przekazywanie roli krupiera:', nicknameToAssign);
+              socket.send(JSON.stringify({
+                  'action': 'assign_croupier',
+                  'nickname_to_assign': nicknameToAssign
+              }));
+              
+              // Ping aktywności po przekazaniu roli
+              pingActivity();
+              
+              // Zamknij modal
+              const modal = bootstrap.Modal.getInstance(document.getElementById('assignCroupierModal'));
+              modal.hide();
+              
+              // Wyczyść globalną zmienną
+              window.nicknameToAssign = null;
+          }
+      });
 
     // Ukryj przycisk resetu jeśli nie jesteś krupierem
     // Usuwam window.isCroupier, nie jest już potrzebny
@@ -804,9 +857,110 @@ document.addEventListener('DOMContentLoaded', function() {
                 'nickname_to_assign': nick,
                 'is_croupier': true // zawsze próbujemy, backend i tak sprawdzi
             }));
+            
+            // Ping aktywności po przekazaniu roli przez menu kontekstowe
+            pingActivity();
+            
             contextMenu.style.display = 'none';
         }
     });
 });
+
+// System aktywności użytkownika
+let inactivityTimer = null;
+let inactivityWarningTimer = null;
+let inactivityCountdownTimer = null;
+let lastActivityTime = Date.now();
+
+// Funkcja do pingowania aktywności
+function pingActivity() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            'action': 'ping_activity',
+            'nickname': nickname
+        }));
+    }
+}
+
+// Funkcja do resetowania timera aktywności
+function resetActivityTimer() {
+    lastActivityTime = Date.now();
+    
+    // Wyczyść istniejące timery
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    if (inactivityWarningTimer) {
+        clearTimeout(inactivityWarningTimer);
+    }
+    if (inactivityCountdownTimer) {
+        clearInterval(inactivityCountdownTimer);
+    }
+    
+    // Ustaw nowy timer na 25 minut
+    inactivityTimer = setTimeout(() => {
+        showInactivityWarning();
+    }, 25 * 60 * 1000); // 25 minut
+    
+    // Ping aktywności co 5 minut
+    setInterval(() => {
+        pingActivity();
+    }, 5 * 60 * 1000); // 5 minut
+}
+
+// Funkcja do wyświetlania ostrzeżenia o nieaktywności
+function showInactivityWarning() {
+    const modal = new bootstrap.Modal(document.getElementById('inactivityModal'));
+    modal.show();
+    
+    let countdown = 300; // 5 minut w sekundach
+    const countdownElement = document.getElementById('inactivityCountdown');
+    const progressElement = document.getElementById('inactivityProgress');
+    
+    // Aktualizuj countdown co sekundę
+    inactivityCountdownTimer = setInterval(() => {
+        countdown--;
+        const minutes = Math.floor(countdown / 60);
+        const seconds = countdown % 60;
+        countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Aktualizuj progress bar
+        const progress = (countdown / 300) * 100;
+        progressElement.style.width = `${progress}%`;
+        
+        if (countdown <= 0) {
+            // Czas się skończył - wyloguj użytkownika
+            clearInterval(inactivityCountdownTimer);
+            window.location.href = '/';
+        }
+    }, 1000);
+}
+
+// Event listener dla przycisku "Jestem aktywny"
+document.getElementById('confirmActivity').addEventListener('click', function() {
+    // Wyczyść countdown timer
+    if (inactivityCountdownTimer) {
+        clearInterval(inactivityCountdownTimer);
+    }
+    
+    // Zamknij modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('inactivityModal'));
+    modal.hide();
+    
+    // Zresetuj timer aktywności
+    resetActivityTimer();
+    
+    // Ping aktywności
+    pingActivity();
+});
+
+// Event listeners dla aktywności użytkownika
+const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+activityEvents.forEach(event => {
+    document.addEventListener(event, resetActivityTimer, true);
+});
+
+// Inicjalizacja timera aktywności
+resetActivityTimer();
 </script>
 {% endblock %} 
