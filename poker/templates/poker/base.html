@@ -23,20 +23,24 @@
         .footer { 
             text-align: center; 
             color: #FF6600; 
-            margin-top: 40px; 
             font-size: 0.95em; 
             background-color: #000000; 
             padding: 20px 0;
-            margin-bottom: 0;
             width: 100%;
-            position: relative;
+            position: fixed;
             bottom: 0;
+            left: 0;
+            z-index: 1000;
         }
         
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
+        }
+        
+        body {
+            padding-bottom: 80px; /* Miejsce na stopkę */
         }
         
 
