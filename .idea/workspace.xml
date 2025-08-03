@@ -4,12 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="57e6492a-a0f2-437b-90e7-7937f0ab5023" name="Changes" comment="poker">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/templates/poker/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poker/templates/poker/table.html" beforeDir="false" afterPath="$PROJECT_DIR$/poker/templates/poker/table.html" afterDir="false" />
-    </list>
+    <list default="true" id="57e6492a-a0f2-437b-90e7-7937f0ab5023" name="Changes" comment="poker" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -240,7 +235,31 @@
       <option name="project" value="LOCAL" />
       <updated>1754234946913</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="poker">
+      <option name="closed" value="true" />
+      <created>1754235051806</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1754235051806</updated>
+    </task>
+    <task id="LOCAL-00024" summary="poker">
+      <option name="closed" value="true" />
+      <created>1754235203024</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1754235203024</updated>
+    </task>
+    <task id="LOCAL-00025" summary="poker">
+      <option name="closed" value="true" />
+      <created>1754235950080</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1754235950080</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

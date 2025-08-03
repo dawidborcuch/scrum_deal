@@ -197,6 +197,29 @@
             transform: scale(1.1);
             background: #E55A00;
         }
+        
+        /* Przycisk Odejdź od stołu */
+        .leave-table-btn {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            background: #dc3545;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .leave-table-btn:hover {
+            transform: scale(1.1);
+            background: #c82333;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -212,6 +235,33 @@
 <button class="dark-mode-toggle" id="darkModeToggle" title="Przełącz tryb ciemny" aria-label="Przełącz tryb ciemny">
     🌙
 </button>
+<button class="leave-table-btn" id="leaveTableBtn" title="Odejdź od stołu" aria-label="Odejdź od stołu" style="display: none;">
+    <i class="fas fa-sign-out-alt"></i>
+</button>
+
+<!-- Modal potwierdzenia opuszczenia stołu -->
+<div class="modal fade" id="leaveTableModal" tabindex="-1" aria-labelledby="leaveTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="leaveTableModalLabel">
+                    <i class="fas fa-sign-out-alt me-2"></i>Odejdź od stołu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz odejść od stołu?</p>
+                <p class="text-muted small">Po opuszczeniu stołu wrócisz do strony głównej.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-danger" id="confirmLeaveTable">
+                    <i class="fas fa-sign-out-alt me-2"></i>Odejdź od stołu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="container">
     {% if messages %}
         {% for message in messages %}
@@ -268,6 +318,36 @@ document.addEventListener('DOMContentLoaded', function() {
             darkModeToggle.click();
         }
     });
+    
+    // Przycisk Odejdź od stołu
+    const leaveTableBtn = document.getElementById('leaveTableBtn');
+    if (leaveTableBtn) {
+        // Pokaż przycisk tylko na stronie z tabelą
+        if (window.location.pathname.includes('/table/')) {
+            leaveTableBtn.style.display = 'block';
+        }
+        
+        leaveTableBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('leaveTableModal'));
+            modal.show();
+        });
+        
+        // Keyboard navigation support dla przycisku Odejdź od stołu
+        leaveTableBtn.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                leaveTableBtn.click();
+            }
+        });
+        
+        // Obsługa potwierdzenia opuszczenia stołu
+        const confirmLeaveTableBtn = document.getElementById('confirmLeaveTable');
+        if (confirmLeaveTableBtn) {
+            confirmLeaveTableBtn.addEventListener('click', function() {
+                window.location.href = '/';
+            });
+        }
+    }
 });
 </script>
 
