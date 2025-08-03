@@ -76,6 +76,55 @@
     .card-body::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
     }
+    
+    /* Styling dla chmurki dołączania */
+    .quick-join-modal {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 280px;
+        z-index: 1050;
+        margin-top: 5px;
+    }
+    
+    .quick-join-modal .card {
+        border: 2px solid #007bff;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .quick-join-modal .card-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .quick-join-modal .card-body {
+        padding: 1rem;
+    }
+    
+    .quick-join-modal .form-control,
+    .quick-join-modal .form-select {
+        font-size: 0.9rem;
+    }
+    
+    .quick-join-modal .btn {
+        font-size: 0.9rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    /* Strzałka wskazująca na przycisk */
+    .quick-join-modal::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        right: 20px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #007bff;
+    }
 </style>
 {% endblock %}
 
@@ -103,20 +152,32 @@
                     <div class="mb-3">
                         <label class="form-label">Rola</label>
                         <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="role" id="roleParticipant" value="participant" {% if last_role == 'participant' or not last_role %}checked{% endif %}>
-                                <label class="form-check-label" for="roleParticipant">Uczestnik</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="role" id="roleObserver" value="observer" {% if last_role == 'observer' %}checked{% endif %}>
-                                <label class="form-check-label" for="roleObserver">Obserwator</label>
-                            </div>
+                                                         <div class="form-check form-check-inline">
+                                 <input class="form-check-input" type="radio" name="role" id="roleParticipant" value="participant" {% if last_role == 'participant' or not last_role %}checked{% endif %}>
+                                 <label class="form-check-label" for="roleParticipant">Uczestnik</label>
+                                 <i class="fas fa-question-circle text-muted ms-1" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top" 
+                                    title="Może aktywnie uczestniczyć w głosowaniu"></i>
+                             </div>
+                                                         <div class="form-check form-check-inline">
+                                 <input class="form-check-input" type="radio" name="role" id="roleObserver" value="observer" {% if last_role == 'observer' %}checked{% endif %}>
+                                 <label class="form-check-label" for="roleObserver">Obserwator</label>
+                                 <i class="fas fa-question-circle text-muted ms-1" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top" 
+                                    title="Może tylko obserwować. Nie może głosować."></i>
+                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="isCroupier" name="is_croupier" {% if last_is_croupier %}checked{% endif %}>
                             <label class="form-check-label" for="isCroupier">Krupier</label>
+                            <i class="fas fa-question-circle text-muted ms-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="Może zarządzać stołem: resetować głosy, usuwać graczy, przekazywać rolę krupiera"></i>
                         </div>
                     </div>
                      <div class="d-grid">
@@ -148,7 +209,7 @@
                 <div class="list-group list-group-flush">
                     {% for table in active_tables %}
                     <div class="list-group-item border-0 px-0 table-card">
-                        <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex justify-content-between align-items-start position-relative">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">
                                     <span class="text-primary fw-bold">{{ table.name }}</span>
@@ -184,9 +245,11 @@
                                 </div>
                                 {% endif %}
                             </div>
-                            <button class="btn btn-sm btn-outline-primary join-btn" onclick="joinTable('{{ table.name }}')">
-                                <i class="fas fa-sign-in-alt me-1"></i>Dołącz
-                            </button>
+                            <div class="position-relative">
+                                <button class="btn btn-sm btn-outline-primary join-btn" onclick="showQuickJoinModal('{{ table.name }}', this)">
+                                    <i class="fas fa-sign-in-alt me-1"></i>Dołącz
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -198,6 +261,74 @@
                     <small>Bądź pierwszym, który utworzy stół!</small>
                 </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal chmurka do szybkiego dołączania -->
+<div class="modal fade" id="quickJoinModal" tabindex="-1" aria-labelledby="quickJoinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title" id="quickJoinModalLabel">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    Dołącz do stołu
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickJoinForm" method="post" action="{% url 'poker:join_table' %}">
+                    {% csrf_token %}
+                    <input type="hidden" id="quickJoinTableName" name="table_name">
+                    
+                    <div class="mb-3">
+                        <label for="quickJoinNickname" class="form-label">Twój nick</label>
+                        <input type="text" class="form-control" id="quickJoinNickname" name="nickname" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rola</label>
+                        <div>
+                                                         <div class="form-check form-check-inline">
+                                 <input class="form-check-input" type="radio" name="role" id="quickRoleParticipant" value="participant" checked>
+                                 <label class="form-check-label" for="quickRoleParticipant">Uczestnik</label>
+                                 <i class="fas fa-question-circle text-muted ms-1" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top" 
+                                    title="Może aktywnie uczestniczyć w głosowaniu"></i>
+                             </div>
+                                                         <div class="form-check form-check-inline">
+                                 <input class="form-check-input" type="radio" name="role" id="quickRoleObserver" value="observer">
+                                 <label class="form-check-label" for="quickRoleObserver">Obserwator</label>
+                                 <i class="fas fa-question-circle text-muted ms-1" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top" 
+                                    title="Może tylko obserwować. Nie może głosować."></i>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="quickIsCroupier" name="is_croupier">
+                            <label class="form-check-label" for="quickIsCroupier">Krupier</label>
+                            <i class="fas fa-question-circle text-muted ms-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="Może zarządzać stołem: resetować głosy, usuwać graczy, przekazywać rolę krupiera"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-1"></i>Dołącz
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Anuluj
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -216,6 +347,42 @@ function checkCroupierAvailability() {
                 document.getElementById('isCroupier').checked = false;
             }
         });
+}
+
+function checkQuickJoinCroupierAvailability() {
+    const tableName = document.getElementById('quickJoinTableName').value;
+    if (!tableName) return;
+    fetch(`/check_croupier/${encodeURIComponent(tableName)}/`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('quickIsCroupier').disabled = data.croupier_exists;
+            if (data.croupier_exists) {
+                document.getElementById('quickIsCroupier').checked = false;
+            }
+        });
+}
+
+function showQuickJoinModal(tableName, button) {
+    // Ustaw nazwę stołu w ukrytym polu
+    document.getElementById('quickJoinTableName').value = tableName;
+    
+    // Sprawdź dostępność krupiera dla tego stołu
+    checkQuickJoinCroupierAvailability();
+    
+    // Pokaż modal
+    const modal = new bootstrap.Modal(document.getElementById('quickJoinModal'));
+    modal.show();
+    
+    // Inicjalizacja tooltipów w modalu
+    setTimeout(() => {
+        const modalTooltipTriggerList = [].slice.call(document.querySelectorAll('#quickJoinModal [data-bs-toggle="tooltip"]'));
+        modalTooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Zaznacz pole nicku
+        document.getElementById('quickJoinNickname').focus();
+    }, 300);
 }
 
 function joinTable(tableName) {
@@ -303,6 +470,12 @@ document.getElementById('tableName').addEventListener('input', checkCroupierAvai
 
 // Sprawdź czy są błędy nicku w sessionStorage (przekierowanie z table.html)
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicjalizacja tooltipów
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
     const nicknameError = sessionStorage.getItem('nicknameError');
     const nicknameErrorValue = sessionStorage.getItem('nicknameErrorValue');
     
