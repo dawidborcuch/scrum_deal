@@ -772,7 +772,10 @@ function addContextMenuToCards() {
             let nick = '';
             const title = card.querySelector('.card-title');
             if (title) {
+                // Usuń HTML i pobierz tylko tekst, potem usuń badge "Krupier"
                 nick = title.textContent.replace(/<[^>]+>/g, '').trim();
+                // Usuń "Krupier" z końca nicku jeśli istnieje
+                nick = nick.replace(/\s*Krupier\s*$/, '').trim();
             } else {
                 // Obserwatorzy mają tylko .fw-bold
                 const bold = card.querySelector('.fw-bold');
@@ -780,7 +783,13 @@ function addContextMenuToCards() {
                     nick = bold.textContent.replace(/<[^>]+>/g, '').trim().split(' ')[0];
                 }
             }
-            if (nick === nickname) return; // nie można nadać sobie
+            
+            // Sprawdź czy to nie jest własna karta
+            if (nick === nickname) {
+                console.log('Próba nadania roli krupiera sobie - blokuję');
+                return;
+            }
+            
             showCroupierContextMenu(nick, e.pageX, e.pageY);
         };
     });
