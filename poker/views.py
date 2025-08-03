@@ -14,6 +14,20 @@ class HomeView(TemplateView):
         # Pobierz listę aktywnych stołów
         active_tables = self.get_active_tables()
         context['active_tables'] = active_tables
+        
+        # Przywróć wartości z sesji, jeśli istnieją (po błędzie duplikacji nicku)
+        request = self.request
+        if 'last_table_name' in request.session:
+            context['last_table_name'] = request.session['last_table_name']
+            context['last_nickname'] = request.session.get('last_nickname', '')
+            context['last_role'] = request.session.get('last_role', 'participant')
+            context['last_is_croupier'] = request.session.get('last_is_croupier', False)
+            # Wyczyść sesję po użyciu
+            del request.session['last_table_name']
+            del request.session['last_nickname']
+            del request.session['last_role']
+            del request.session['last_is_croupier']
+        
         return context
     
     def get_active_tables(self):
@@ -76,6 +90,11 @@ def join_table(request):
                 # Nick jest zajęty - dodaj komunikat i przekieruj z powrotem do strony głównej
                 from django.contrib import messages
                 messages.error(request, f'Nick "{nickname}" jest już zajęty przy stole "{table_name}". Wybierz inny nick.')
+                # Zapisz nazwę stołu w sesji, aby ją przywrócić na stronie głównej
+                request.session['last_table_name'] = table_name
+                request.session['last_nickname'] = nickname
+                request.session['last_role'] = role
+                request.session['last_is_croupier'] = is_croupier
                 return redirect('poker:home')
         
         # Nick jest dostępny - zapisz w sesji i przekieruj do stołu

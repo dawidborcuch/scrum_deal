@@ -94,28 +94,28 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="tableName" class="form-label">Nazwa stołu</label>
-                        <input type="text" class="form-control" id="tableName" name="table_name" required>
+                        <input type="text" class="form-control" id="tableName" name="table_name" value="{{ last_table_name|default:'' }}" required>
                     </div>
                     <div class="mb-3">
                         <label for="nickname" class="form-label">Twój nick</label>
-                        <input type="text" class="form-control" id="nickname" name="nickname" required>
+                        <input type="text" class="form-control" id="nickname" name="nickname" value="{{ last_nickname|default:'' }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Rola</label>
                         <div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="role" id="roleParticipant" value="participant" checked>
+                                <input class="form-check-input" type="radio" name="role" id="roleParticipant" value="participant" {% if last_role == 'participant' or not last_role %}checked{% endif %}>
                                 <label class="form-check-label" for="roleParticipant">Uczestnik</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="role" id="roleObserver" value="observer">
+                                <input class="form-check-input" type="radio" name="role" id="roleObserver" value="observer" {% if last_role == 'observer' %}checked{% endif %}>
                                 <label class="form-check-label" for="roleObserver">Obserwator</label>
                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="isCroupier" name="is_croupier">
+                            <input class="form-check-input" type="checkbox" id="isCroupier" name="is_croupier" {% if last_is_croupier %}checked{% endif %}>
                             <label class="form-check-label" for="isCroupier">Krupier</label>
                         </div>
                     </div>
@@ -331,6 +331,36 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    
+    // Sprawdź czy nick został przywrócony z sesji i podświetl pole na czerwono
+    const nicknameField = document.getElementById('nickname');
+    const tableNameField = document.getElementById('tableName');
+    if (nicknameField && tableNameField && nicknameField.value && tableNameField.value) {
+        // Jeśli oba pola mają wartości, sprawdź czy to może być przywrócone z sesji
+        // i czy powinno być podświetlone na czerwono
+        const djangoMessage = document.querySelector('.django-message.alert-danger');
+        if (djangoMessage) {
+            const messageText = djangoMessage.textContent || djangoMessage.innerText;
+            if (messageText.includes('jest już zajęty')) {
+                const match = messageText.match(/Nick "([^"]+)" jest już zajęty/);
+                if (match && match[1] === nicknameField.value) {
+                    // Podświetl pole nicku na czerwono
+                    nicknameField.classList.add('is-invalid');
+                    nicknameField.style.borderColor = '#dc3545';
+                    nicknameField.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+                    
+                    // Dodaj event listener do usunięcia czerwonego podświetlenia
+                    nicknameField.addEventListener('input', function() {
+                        if (this.value !== match[1]) {
+                            this.classList.remove('is-invalid');
+                            this.style.borderColor = '';
+                            this.style.boxShadow = '';
+                        }
+                    });
+                }
+            }
+        }
+    }
 });
 
 // Auto-refresh listy stołów co 30 sekund
