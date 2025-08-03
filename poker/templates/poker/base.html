@@ -99,7 +99,12 @@
         
         /* Dark mode dla Aktywnych stołów */
         body.dark-mode .card-header.bg-info {
-            background-color: #1a4a5a !important;
+            background-color: #404040 !important;
+        }
+        
+        /* Pomarańczowy nagłówek dla Aktywnych stołów w light mode */
+        .card-header.bg-info {
+            background-color: #FF6600 !important;
         }
         
         body.dark-mode .badge.bg-light {
@@ -117,6 +122,30 @@
             color: #b0b0b0 !important;
         }
         
+        /* Pomarańczowe nagłówki w dark mode */
+        body.dark-mode h1,
+        body.dark-mode h2,
+        body.dark-mode h3,
+        body.dark-mode h4,
+        body.dark-mode h5,
+        body.dark-mode h6 {
+            color: #FF6600 !important;
+        }
+        
+        body.dark-mode .card-header h5 {
+            color: #ffffff !important;
+        }
+        
+        /* Pomarańczowe nagłówki w card-header w dark mode */
+        body.dark-mode .card-header.bg-primary h2,
+        body.dark-mode .card-header.bg-primary small {
+            color: #FF6600 !important;
+        }
+        
+        body.dark-mode .card-header.bg-info h5 {
+            color: #FF6600 !important;
+        }
+        
         body.dark-mode .btn-outline-primary {
             border-color: #FF6600 !important;
             color: #FF6600 !important;
@@ -125,6 +154,25 @@
         body.dark-mode .btn-outline-primary:hover {
             background-color: #FF6600 !important;
             color: #ffffff !important;
+        }
+        
+        /* Podświetlenie przycisku Dołącz */
+        .btn-outline-primary {
+            border-color: #FF6600 !important;
+            color: #FF6600 !important;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #FF6600 !important;
+            color: #ffffff !important;
+            border-color: #FF6600 !important;
+        }
+        
+        .btn-outline-primary:focus {
+            background-color: #FF6600 !important;
+            color: #ffffff !important;
+            border-color: #FF6600 !important;
+            box-shadow: 0 0 0 0.2rem rgba(255, 102, 0, 0.25) !important;
         }
         
         /* Dark mode toggle button */
