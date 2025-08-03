@@ -130,6 +130,27 @@
     .player-card:hover .remove-player-btn {
         opacity: 1;
     }
+    .assign-croupier-btn {
+        position: absolute;
+        top: 5px;
+        right: 35px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        background: none;
+        border: none;
+        color: #6c757d;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .assign-croupier-btn:hover {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    .player-card:hover .assign-croupier-btn {
+        opacity: 1;
+    }
     .avatar {
         width: 40px;
         height: 40px;
@@ -214,29 +235,59 @@
                 </div>
             </div>
             
-            <!-- Modal dla statystyk -->
-            <div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="statsModalLabel">Statystyki głosowań</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                                                                          <div class="modal-body">
-                             <div class="row">
-                                 <div class="col-12 text-center">
-                                     <h6>Średnia głosów</h6>
-                                     <p id="averageVote" class="h4 text-primary">-</p>
-                                 </div>
-                             </div>
-                             <div class="mt-3">
-                                 <h6>Rozkład głosów</h6>
-                                 <div id="voteDistribution"></div>
+                         <!-- Modal dla statystyk -->
+             <div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+                 <div class="modal-dialog modal-lg">
+                     <div class="modal-content">
+                         <div class="modal-header">
+                             <h5 class="modal-title" id="statsModalLabel">Statystyki głosowań</h5>
+                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                         </div>
+                         <div class="modal-body">
+                              <div class="row">
+                                  <div class="col-12 text-center">
+                                      <h6>Średnia głosów</h6>
+                                      <p id="averageVote" class="h4 text-primary">-</p>
+                                  </div>
+                              </div>
+                              <div class="mt-3">
+                                  <h6>Rozkład głosów</h6>
+                                  <div id="voteDistribution"></div>
+                              </div>
+                          </div>
+                     </div>
+                 </div>
+             </div>
+             
+             <!-- Modal dla potwierdzenia przekazania roli krupiera -->
+             <div class="modal fade" id="assignCroupierModal" tabindex="-1" aria-labelledby="assignCroupierModalLabel" aria-hidden="true">
+                 <div class="modal-dialog">
+                     <div class="modal-content">
+                         <div class="modal-header">
+                             <h5 class="modal-title" id="assignCroupierModalLabel">
+                                 <i class="fas fa-crown text-warning me-2"></i>
+                                 Przekaż rolę krupiera
+                             </h5>
+                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                         </div>
+                         <div class="modal-body text-center">
+                             <div class="mb-3">
+                                 <i class="fas fa-user-tie fa-3x text-primary mb-3"></i>
+                                 <p class="lead">Czy na pewno chcesz przekazać rolę krupiera graczowi <strong id="assignCroupierNickname"></strong>?</p>
+                                 <p class="text-muted">Ta akcja nie może być cofnięta.</p>
                              </div>
                          </div>
-                    </div>
-                </div>
-            </div>
+                         <div class="modal-footer">
+                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                 <i class="fas fa-times me-1"></i>Anuluj
+                             </button>
+                             <button type="button" class="btn btn-warning" id="confirmAssignCroupier">
+                                 <i class="fas fa-crown me-1"></i>Przekaż rolę
+                             </button>
+                         </div>
+                     </div>
+                 </div>
+             </div>
                 </div>
             </div>
         </div>
@@ -471,14 +522,17 @@ function updatePlayersList(players, allVoted) {
         
         let croupierBadge = player.is_croupier ? '<span class="badge bg-primary ms-2">Krupier</span>' : '';
         
-        // Przycisk usuwania tylko dla krupiera i nie przy własnej karcie
-        let removeBtn = '';
+        // Przyciski tylko dla krupiera i nie przy własnej karcie
+        let actionBtns = '';
         if (isCroupierNow && player.nickname !== nickname) {
-            removeBtn = `<button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${player.nickname}")' title='Usuń gracza'>X</button>`;
+            actionBtns = `
+                <button class='assign-croupier-btn' onclick='assignCroupier("${player.nickname}")' title='Przekaż rolę krupiera'>⋮</button>
+                <button class='btn btn-sm btn-danger remove-player-btn' onclick='removePlayer("${player.nickname}")' title='Usuń gracza'>X</button>
+            `;
         }
         playerCard.innerHTML = `
             <div class='card player-card position-relative'>
-                ${removeBtn}
+                ${actionBtns}
                 <div class='card-body'>
                     <h5 class='card-title'>${player.nickname} ${croupierBadge}</h5>
                     <p class='card-text'>
@@ -553,6 +607,18 @@ function removePlayer(nicknameToRemove) {
             'nickname_to_remove': nicknameToRemove
         }));
     }
+}
+
+function assignCroupier(nicknameToAssign) {
+    // Ustaw nick w modalu
+    document.getElementById('assignCroupierNickname').textContent = nicknameToAssign;
+    
+    // Pokaż modal
+    const modal = new bootstrap.Modal(document.getElementById('assignCroupierModal'));
+    modal.show();
+    
+    // Zapisz nick do przekazania w globalnej zmiennej
+    window.nicknameToAssign = nicknameToAssign;
 }
 
 function updateCardsState(players, allVotedParam) {
@@ -646,13 +712,32 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePlayersList(players, false);
     });
     
-    document.getElementById('statsButton').addEventListener('click', function() {
-        // Pobierz aktualnych graczy z DOM lub z ostatniego stanu
-        const currentPlayers = window.lastPlayers || [];
-        showStats(currentPlayers);
-        const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
-        statsModal.show();
-    });
+         document.getElementById('statsButton').addEventListener('click', function() {
+         // Pobierz aktualnych graczy z DOM lub z ostatniego stanu
+         const currentPlayers = window.lastPlayers || [];
+         showStats(currentPlayers);
+         const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+         statsModal.show();
+     });
+     
+     // Event listener dla potwierdzenia przekazania roli krupiera
+     document.getElementById('confirmAssignCroupier').addEventListener('click', function() {
+         const nicknameToAssign = window.nicknameToAssign;
+         if (nicknameToAssign) {
+             console.log('Przekazywanie roli krupiera:', nicknameToAssign);
+             socket.send(JSON.stringify({
+                 'action': 'assign_croupier',
+                 'nickname_to_assign': nicknameToAssign
+             }));
+             
+             // Zamknij modal
+             const modal = bootstrap.Modal.getInstance(document.getElementById('assignCroupierModal'));
+             modal.hide();
+             
+             // Wyczyść globalną zmienną
+             window.nicknameToAssign = null;
+         }
+     });
 
     // Ukryj przycisk resetu jeśli nie jesteś krupierem
     // Usuwam window.isCroupier, nie jest już potrzebny
