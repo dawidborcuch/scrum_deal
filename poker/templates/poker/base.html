@@ -13,6 +13,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            position: relative;
         }
         .navbar-brand { 
             font-weight: bold; 
@@ -38,17 +39,7 @@
             padding: 0;
         }
         
-        /* Wymuszenie czarnego tła pod stopką */
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100px;
-            background-color: #000000;
-            z-index: -1;
-        }
+
         
         /* Kolory Orange */
         .bg-primary {
