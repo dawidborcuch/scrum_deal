@@ -111,6 +111,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.handle_remove_player(data)
             elif action == 'assign_croupier':
                 await self.handle_assign_croupier(data)
+            elif action == 'become_croupier':
+                await self.handle_become_croupier()
             elif action == 'ping_activity':
                 await self.handle_ping_activity(data)
         except Exception as e:
@@ -336,6 +338,78 @@ class PokerConsumer(AsyncWebsocketConsumer):
         }
         
         logger.info(f"Rola krupiera została przekazana graczowi {nickname_to_assign} przy stole {self.table_name}")
+        await self.channel_layer.group_send(
+            self.table_group_name,
+            {
+                'type': 'player_joined',
+                'players': players_data,
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+            }
+        )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
+            }
+        )
+
+    async def handle_become_croupier(self):
+        # Sprawdź czy gracz jest już krupierem
+        if getattr(self, 'is_croupier', False):
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Jesteś już krupierem!'
+            }))
+            return
+        
+        # Pobierz aktualne dane stołu
+        table_data = await self.get_table_data()
+        if not table_data:
+            return
+        
+        players_data = table_data.get('players', [])
+        
+        # Sprawdź czy już jest krupier przy stole
+        croupier_exists = any(p.get('is_croupier', False) for p in players_data)
+        if croupier_exists:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Przy tym stole jest już krupier!'
+            }))
+            return
+        
+        # Znajdź gracza i nadaj mu rolę krupiera
+        current_player = None
+        for p in players_data:
+            if p['nickname'] == getattr(self, 'nickname', None):
+                p['is_croupier'] = True
+                current_player = p
+                break
+        
+        if not current_player:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Nie znaleziono gracza!'
+            }))
+            return
+        
+        # Zaktualizuj stan gracza w konsumencie
+        self.is_croupier = True
+        
+        # Zapisz zmiany
+        await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        ACTIVE_TABLES[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time()
+        }
+        
+        logger.info(f"Gracz {self.nickname} otrzymał rolę krupiera przy stole {self.table_name}")
+        
+        # Wyślij aktualizację do wszystkich graczy
         await self.channel_layer.group_send(
             self.table_group_name,
             {

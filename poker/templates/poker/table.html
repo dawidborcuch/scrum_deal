@@ -230,6 +230,9 @@
                     </div>
                     <div class="d-grid gap-2 mt-3">
                         <button class="btn btn-danger btn-lg" id="resetButton">Resetuj stół</button>
+                        <button class="btn btn-warning btn-lg" id="becomeCroupierButton" style="display: none;">
+                            <i class="fas fa-crown me-2"></i>Otrzymaj rolę krupiera
+                        </button>
                         <button class="btn btn-info btn-lg" id="statsButton" style="display: none;">Statystyki</button>
                     </div>
                 </div>
@@ -621,11 +624,20 @@ function updatePlayersList(players, allVoted) {
     if (currentPlayer && !currentPlayer.has_voted) {
         document.querySelectorAll('.poker-card').forEach(c => c.classList.remove('selected'));
     }
+    // Sprawdź czy jest krupier przy stole
+    const hasCroupier = players.some(p => p.is_croupier);
+    
     // Pokaż/ukryj przyciski
     const resetBtn = document.getElementById('resetButton');
+    const becomeCroupierBtn = document.getElementById('becomeCroupierButton');
     const statsBtn = document.getElementById('statsButton');
+    
     if (resetBtn) {
         resetBtn.style.display = isCroupierNow ? '' : 'none';
+    }
+    if (becomeCroupierBtn) {
+        // Pokaż przycisk "Otrzymaj rolę krupiera" tylko jeśli nie ma krupiera przy stole
+        becomeCroupierBtn.style.display = !hasCroupier ? '' : 'none';
     }
     if (statsBtn) {
         statsBtn.style.display = allVoted ? '' : 'none';
@@ -767,6 +779,16 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
         updatePlayersList(players, false);
+    });
+
+    document.getElementById('becomeCroupierButton').addEventListener('click', function() {
+        console.log('Próba otrzymania roli krupiera');
+        socket.send(JSON.stringify({
+            'action': 'become_croupier'
+        }));
+        
+        // Ping aktywności po próbie otrzymania roli krupiera
+        pingActivity();
     });
     
                    document.getElementById('statsButton').addEventListener('click', function() {
