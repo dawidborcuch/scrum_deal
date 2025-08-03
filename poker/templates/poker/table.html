@@ -603,17 +603,16 @@ function updatePlayersList(players, allVoted) {
             `;
         }
         
-        const observerCard = document.createElement('div');
-        observerCard.className = 'col-md-3 mb-2';
-        observerCard.innerHTML = `
-            <div class="card player-card bg-light position-relative">
-                ${actionBtns}
-                <div class="card-body text-center">
-                    <span class="fw-bold">${observer.nickname} ${croupierBadge}</span><br>
-                    <span class="badge bg-secondary">Obserwator</span>
-                </div>
-            </div>
-        `;
+                 const observerCard = document.createElement('div');
+         observerCard.className = 'col-md-3 mb-2';
+         observerCard.innerHTML = `
+             <div class="card player-card bg-light position-relative">
+                 ${actionBtns}
+                 <div class="card-body text-center d-flex align-items-center justify-content-center" style="min-height: 80px;">
+                     <span class="fw-bold">${observer.nickname} ${croupierBadge}</span>
+                 </div>
+             </div>
+         `;
         observersSection.appendChild(observerCard);
     });
     }
