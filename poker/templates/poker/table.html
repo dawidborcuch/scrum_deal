@@ -4,6 +4,29 @@
 
 {% block extra_css %}
 <style>
+    /* Animacje dla tooltip */
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
     .card.poker-card {
         cursor: pointer;
         transition: transform 0.2s;
@@ -290,6 +313,69 @@ function showStats(players) {
     });
 }
 
+function showNicknameError(message, nickname) {
+    // Pokaż tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'nicknameTooltip';
+    tooltip.className = 'alert alert-danger position-fixed';
+    tooltip.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    tooltip.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+            <div>
+                <strong>Błąd nicku</strong><br>
+                ${message}
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="closeNicknameTooltip()"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Podświetl pole nicku na czerwono
+    const nicknameField = document.getElementById('nickname');
+    if (nicknameField) {
+        nicknameField.classList.add('is-invalid');
+        nicknameField.style.borderColor = '#dc3545';
+        nicknameField.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+        
+        // Dodaj event listener do usunięcia czerwonego podświetlenia
+        nicknameField.addEventListener('input', function() {
+            if (this.value !== nickname) {
+                this.classList.remove('is-invalid');
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }
+        });
+    }
+    
+    // Auto-ukryj tooltip po 5 sekundach
+    setTimeout(() => {
+        closeNicknameTooltip();
+    }, 5000);
+}
+
+function closeNicknameTooltip() {
+    const tooltip = document.getElementById('nicknameTooltip');
+    if (tooltip) {
+        tooltip.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            if (tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+            }
+        }, 300);
+    }
+}
+
 function connectWebSocket() {
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
     const ws_path = `${ws_scheme}://${window.location.host}/ws/poker/${tableName}/`;
@@ -311,8 +397,7 @@ function connectWebSocket() {
         console.log('Otrzymano wiadomość:', e.data);
         const data = JSON.parse(e.data);
         if (data.type === 'nickname_taken') {
-            alert(data.message);
-            window.location.href = '/';
+            showNicknameError(data.message, data.nickname);
             return;
         }
         if (data.type === 'croupier_exists') {

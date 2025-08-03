@@ -1,9 +1,13 @@
 import json
 import logging
+import time
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Table, Player
 from django.core.cache import cache
+
+# Globalna lista aktywnych stołów (w pamięci aplikacji)
+ACTIVE_TABLES = {}
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +57,18 @@ class PokerConsumer(AsyncWebsocketConsumer):
                     logger.info(f"Nowy krupier po odejściu poprzedniego: {new_croupier['nickname']} na stole {self.table_name}")
                 table_data['players'] = players_data
                 await self.save_table_data(table_data)
+                
+                # Aktualizuj globalną listę aktywnych stołów
+                if players_data:
+                    ACTIVE_TABLES[self.table_name] = {
+                        'players': players_data,
+                        'last_updated': time.time()
+                    }
+                else:
+                    # Usuń stół z globalnej listy jeśli nie ma graczy
+                    if self.table_name in ACTIVE_TABLES:
+                        del ACTIVE_TABLES[self.table_name]
+                
                 logger.info(f"Gracz {nickname} został usunięty po rozłączeniu ze stołu {self.table_name}")
                 await self.channel_layer.group_send(
                     self.table_group_name,
@@ -117,9 +133,9 @@ class PokerConsumer(AsyncWebsocketConsumer):
             # Nick już zajęty
             await self.send(text_data=json.dumps({
                 'type': 'nickname_taken',
-                'message': f'Nick "{nickname}" jest już zajęty przy tym stole. Wybierz inny.'
+                'message': f'Nick "{nickname}" jest już zajęty przy tym stole. Wybierz inny.',
+                'nickname': nickname
             }))
-            await self.close()
             return
 
         players_data.append({
@@ -131,6 +147,13 @@ class PokerConsumer(AsyncWebsocketConsumer):
         })
         table_data['players'] = players_data
         await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        ACTIVE_TABLES[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time()
+        }
+        
         logger.info(f"Gracz {nickname} dołączył do stołu {self.table_name} jako {role} (krupier: {self.is_croupier})")
 
         # Wyślij aktualny stan stołu
@@ -167,6 +190,13 @@ class PokerConsumer(AsyncWebsocketConsumer):
 
         all_voted = all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
         await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        ACTIVE_TABLES[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time()
+        }
+        
         logger.info(f"Gracz {nickname} zagłosował {vote} na stole {self.table_name}")
 
         # Wyślij aktualizację do wszystkich
@@ -222,6 +252,18 @@ class PokerConsumer(AsyncWebsocketConsumer):
         table_data['players'] = players_data
 
         await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        if players_data:
+            ACTIVE_TABLES[self.table_name] = {
+                'players': players_data,
+                'last_updated': time.time()
+            }
+        else:
+            # Usuń stół z globalnej listy jeśli nie ma graczy
+            if self.table_name in ACTIVE_TABLES:
+                del ACTIVE_TABLES[self.table_name]
+        
         logger.info(f"Usunięto gracza {nickname_to_remove} ze stołu {self.table_name}")
 
         await self.channel_layer.group_send(
@@ -251,6 +293,13 @@ class PokerConsumer(AsyncWebsocketConsumer):
         for p in players_data:
             p['is_croupier'] = (p['nickname'] == nickname_to_assign)
         await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        ACTIVE_TABLES[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time()
+        }
+        
         logger.info(f"Rola krupiera została przekazana graczowi {nickname_to_assign} przy stole {self.table_name}")
         await self.channel_layer.group_send(
             self.table_group_name,
