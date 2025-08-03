@@ -201,66 +201,64 @@
             <h5 class="mb-0">
                 <i class="fas fa-users me-2"></i>
                 Aktywne stoły
-                <span class="badge bg-light text-dark ms-2">{{ active_tables|length }}</span>
+                <span id="activeTablesCounter" class="badge bg-light text-dark ms-2">{{ active_tables|length }}</span>
             </h5>
         </div>
         <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-            {% if active_tables %}
-                <div class="list-group list-group-flush">
-                    {% for table in active_tables %}
-                    <div class="list-group-item border-0 px-0 table-card">
-                        <div class="d-flex justify-content-between align-items-start position-relative">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">
-                                    <span class="text-primary fw-bold">{{ table.name }}</span>
-                                    {% if table.has_voting %}
-                                        <span class="badge bg-warning text-dark ms-2">Głosowanie</span>
-                                    {% endif %}
-                                </h6>
-                                <div class="small text-muted">
-                                    <i class="fas fa-user me-1"></i>
-                                    {% if table.participants == 1 %}
-                                        1 Uczestnik
-                                    {% elif table.participants >= 2 and table.participants <= 4 %}
-                                        {{ table.participants }} Uczestników
-                                    {% else %}
-                                        {{ table.participants }} Uczestników
-                                    {% endif %}
-                                    {% if table.observers > 0 %}
-                                        <span class="ms-2">
-                                            <i class="fas fa-eye me-1"></i>
-                                            {% if table.observers == 1 %}
-                                                1 obserwator
-                                            {% elif table.observers >= 2 and table.observers <= 4 %}
-                                                {{ table.observers }} obserwatorów
-                                            {% else %}
-                                                {{ table.observers }} obserwatorów
-                                            {% endif %}
-                                        </span>
-                                    {% endif %}
+            <div id="activeTablesContainer">
+                {% if active_tables %}
+                    <div class="list-group list-group-flush">
+                        {% for table in active_tables %}
+                        <div class="list-group-item border-0 px-0 table-card">
+                            <div class="d-flex justify-content-between align-items-start position-relative">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <span class="text-primary fw-bold">{{ table.name }}</span>
+                                        {% if table.has_voting %}
+                                            <span class="badge bg-warning text-dark ms-2">Głosowanie</span>
+                                        {% endif %}
+                                    </h6>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        {% if table.participants == 1 %}
+                                            1 Uczestnik
+                                        {% elif table.participants >= 2 and table.participants <= 4 %}
+                                            {{ table.participants }} Uczestników
+                                        {% else %}
+                                            {{ table.participants }} Uczestników
+                                        {% endif %}
+                                        {% if table.observers > 0 %}
+                                            <span class="ms-2">
+                                                <i class="fas fa-eye me-1"></i>
+                                                {% if table.observers == 1 %}
+                                                    1 obserwator
+                                                {% elif table.observers >= 2 and table.observers <= 4 %}
+                                                    {{ table.observers }} obserwatorów
+                                                {% else %}
+                                                    {{ table.observers }} obserwatorów
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
                                 </div>
-                                {% if table.croupier %}
-                                <div class="small text-muted">
-                                    <i class="fas fa-crown me-1"></i>Krupier: {{ table.croupier }}
+                                <div class="position-relative">
+                                    <button class="btn btn-sm btn-outline-primary join-btn" onclick="showQuickJoinModal('{{ table.name }}', this)">
+                                        <i class="fas fa-sign-in-alt me-1"></i>Dołącz
+                                    </button>
                                 </div>
-                                {% endif %}
-                            </div>
-                            <div class="position-relative">
-                                <button class="btn btn-sm btn-outline-primary join-btn" onclick="showQuickJoinModal('{{ table.name }}', this)">
-                                    <i class="fas fa-sign-in-alt me-1"></i>Dołącz
-                                </button>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-inbox fa-2x mb-3"></i>
-                    <p class="mb-1">Brak aktywnych stołów</p>
-                    <small>Bądź pierwszym, który utworzy stół!</small>
-                </div>
-            {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-3"></i>
+                        <p class="mb-1">Brak aktywnych stołów</p>
+                        <small>Bądź pierwszym, który utworzy stół!</small>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -622,10 +620,105 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Auto-refresh listy stołów co 30 sekund
-setInterval(function() {
-    location.reload();
-}, 30000);
+// WebSocket dla strony głównej
+let homeSocket = null;
+
+function connectHomeWebSocket() {
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws_path = `${ws_scheme}://${window.location.host}/ws/home/`;
+    console.log('Próba połączenia WebSocket dla strony głównej:', ws_path);
+    
+    homeSocket = new WebSocket(ws_path);
+
+    homeSocket.onopen = function(e) {
+        console.log('Połączenie WebSocket dla strony głównej otwarte');
+        // Poproś o aktualną listę stołów
+        homeSocket.send(JSON.stringify({
+            'action': 'get_active_tables'
+        }));
+    };
+
+    homeSocket.onmessage = function(e) {
+        console.log('Otrzymano wiadomość na stronie głównej:', e.data);
+        const data = JSON.parse(e.data);
+        if (data.type === 'active_tables_update') {
+            updateActiveTablesList(data.active_tables);
+        }
+    };
+
+    homeSocket.onerror = function(e) {
+        console.error('Błąd WebSocket dla strony głównej:', e);
+    };
+
+    homeSocket.onclose = function(e) {
+        console.log('Połączenie WebSocket dla strony głównej zamknięte:', e);
+        // Próba ponownego połączenia po 2 sekundach
+        setTimeout(connectHomeWebSocket, 2000);
+    };
+}
+
+function updateActiveTablesList(activeTables) {
+    const activeTablesContainer = document.getElementById('activeTablesContainer');
+    const activeTablesCounter = document.getElementById('activeTablesCounter');
+    if (!activeTablesContainer) return;
+    
+    // Aktualizuj licznik
+    if (activeTablesCounter) {
+        activeTablesCounter.textContent = activeTables.length;
+    }
+    
+    if (activeTables.length === 0) {
+        activeTablesContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x mb-3"></i>
+                <p class="mb-1">Brak aktywnych stołów</p>
+                <small>Bądź pierwszym, który utworzy stół!</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="list-group list-group-flush">';
+    activeTables.forEach(table => {
+        const participantsText = table.participants_count === 1 ? '1 Uczestnik' : 
+                               table.participants_count < 5 ? `${table.participants_count} Uczestników` : 
+                               `${table.participants_count} Uczestników`;
+        const observersText = table.observers_count === 1 ? '1 obserwator' : 
+                             table.observers_count < 5 ? `${table.observers_count} obserwatorów` : 
+                             `${table.observers_count} obserwatorów`;
+        
+        html += `
+            <div class="list-group-item border-0 px-0 table-card">
+                <div class="d-flex justify-content-between align-items-start position-relative">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <span class="text-primary fw-bold">${table.name}</span>
+                        </h6>
+                        <div class="small text-muted">
+                            <i class="fas fa-user me-1"></i>${participantsText}
+                            ${table.observers_count > 0 ? `
+                                <span class="ms-2">
+                                    <i class="fas fa-eye me-1"></i>${observersText}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="position-relative">
+                        <button class="btn btn-sm btn-outline-primary join-btn" onclick="showQuickJoinModal('${table.name}', this)">
+                            <i class="fas fa-sign-in-alt me-1"></i>Dołącz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    activeTablesContainer.innerHTML = html;
+}
+
+// Inicjalizacja WebSocket dla strony głównej
+connectHomeWebSocket();
 
 function debugCache() {
     fetch('/api/active_tables/')

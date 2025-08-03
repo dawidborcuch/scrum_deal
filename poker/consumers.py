@@ -69,6 +69,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                     if self.table_name in ACTIVE_TABLES:
                         del ACTIVE_TABLES[self.table_name]
                 
+                # Wyślij aktualizację do strony głównej
+                await self.channel_layer.group_send(
+                    'home_page',
+                    {
+                        'type': 'broadcast_table_update'
+                    }
+                )
+                
                 logger.info(f"Gracz {nickname} został usunięty po rozłączeniu ze stołu {self.table_name}")
                 await self.channel_layer.group_send(
                     self.table_group_name,
@@ -78,6 +86,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                         'all_voted': all(player['has_voted'] for player in players_data)
                     }
                 )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
+            }
+        )
 
     async def receive(self, text_data):
         try:
@@ -168,6 +184,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
             }
         )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
+            }
+        )
 
     async def handle_vote(self, data):
         nickname = data.get('nickname')
@@ -209,6 +233,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'type': 'vote_cast',
                 'players': players_data,
                 'all_voted': all_voted
+            }
+        )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
             }
         )
 
@@ -310,6 +342,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'type': 'player_joined',
                 'players': players_data,
                 'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+            }
+        )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
             }
         )
 
@@ -414,3 +454,78 @@ class PokerConsumer(AsyncWebsocketConsumer):
             }
             
             logger.info(f"Zaktualizowano aktywność gracza {nickname} na stole {self.table_name}") 
+
+class HomeConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Dołącz do grupy strony głównej
+        self.home_group_name = 'home_page'
+        await self.channel_layer.group_add(
+            self.home_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        logger.info(f"Nowe połączenie WebSocket dla strony głównej (channel: {self.channel_name})")
+
+    async def disconnect(self, close_code):
+        # Usuń z grupy strony głównej
+        await self.channel_layer.group_discard(
+            self.home_group_name,
+            self.channel_name
+        )
+        logger.info(f"Rozłączono WebSocket dla strony głównej (channel: {self.channel_name})")
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            action = data.get('action')
+            logger.info(f"Otrzymano akcję na stronie głównej: {action}")
+
+            if action == 'get_active_tables':
+                await self.handle_get_active_tables()
+        except Exception as e:
+            logger.error(f"Błąd podczas przetwarzania wiadomości na stronie głównej: {e}")
+
+    async def handle_get_active_tables(self):
+        """Wysyła aktualną listę aktywnych stołów do klienta"""
+        active_tables = []
+        current_time = time.time()
+        
+        for table_name, table_info in ACTIVE_TABLES.items():
+            # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
+            if current_time - table_info['last_updated'] <= 300:
+                participants = [p for p in table_info['players'] if p['role'] != 'observer']
+                observers = [p for p in table_info['players'] if p['role'] == 'observer']
+                
+                active_tables.append({
+                    'name': table_name,
+                    'participants_count': len(participants),
+                    'observers_count': len(observers)
+                })
+        
+        await self.send(text_data=json.dumps({
+            'type': 'active_tables_update',
+            'active_tables': active_tables
+        }))
+
+    async def broadcast_table_update(self, event):
+        """Wysyła aktualizację listy stołów do wszystkich klientów na stronie głównej"""
+        active_tables = []
+        current_time = time.time()
+        
+        for table_name, table_info in ACTIVE_TABLES.items():
+            # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
+            if current_time - table_info['last_updated'] <= 300:
+                participants = [p for p in table_info['players'] if p['role'] != 'observer']
+                observers = [p for p in table_info['players'] if p['role'] == 'observer']
+                
+                active_tables.append({
+                    'name': table_name,
+                    'participants_count': len(participants),
+                    'observers_count': len(observers)
+                })
+        
+        await self.send(text_data=json.dumps({
+            'type': 'active_tables_update',
+            'active_tables': active_tables
+        })) 
