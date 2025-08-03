@@ -140,6 +140,14 @@ def join_table(request):
         request.session['role'] = role
         request.session['is_croupier'] = is_croupier
         
+        # Jeśli tworzysz nowy stół BEZ hasła, usuń hasło z cache i ACTIVE_TABLES
+        if not is_joining_existing and not enable_password:
+            if table_data and 'password' in table_data:
+                del table_data['password']
+                cache.set(f'table_{table_name}', table_data, 3600)
+            if table_name in ACTIVE_TABLES and 'password' in ACTIVE_TABLES[table_name]:
+                del ACTIVE_TABLES[table_name]['password']
+        
         # Jeśli tworzysz nowy stół i włączono hasło, zapisz je w cache i ACTIVE_TABLES
         if not is_joining_existing and enable_password and table_password:
             # Zapisz hasło w cache dla nowego stołu

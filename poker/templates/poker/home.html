@@ -448,7 +448,6 @@ function checkTablePassword(tableName) {
             }
         })
         .catch(error => {
-            console.error('Błąd podczas sprawdzania hasła stołu:', error);
             // W przypadku błędu ukryj pole hasła
             document.getElementById('quickPasswordField').style.display = 'none';
             document.getElementById('quickTablePassword').required = false;
@@ -680,34 +679,23 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.removeItem('nicknameErrorValue');
     }
     
-    // Sprawdź czy są Django messages (błędy z join_table view)
-    const djangoMessages = document.querySelectorAll('.django-message.alert-danger');
-    console.log('Found Django messages count:', djangoMessages.length); // Debug log
-    djangoMessages.forEach(function(message) {
-        const messageText = message.textContent || message.innerText;
-        console.log('Found Django message:', messageText); // Debug log
-        if (messageText.includes('jest już zajęty')) {
-            // Wyciągnij nick z komunikatu
-            const match = messageText.match(/Nick "([^"]+)" jest już zajęty/);
-            if (match) {
-                const nickname = match[1];
-                console.log('Extracted nickname:', nickname); // Debug log
+            // Przetwarzanie wiadomości Django
+        const djangoMessages = document.querySelectorAll('.django-message');
+        djangoMessages.forEach(message => {
+            const messageText = message.textContent.trim();
+            
+            if (messageText.includes('Nick') && messageText.includes('jest już zajęty')) {
+                const nickname = extractNicknameFromMessage(messageText);
                 showNicknameError(messageText, nickname);
-                // Ukryj oryginalny komunikat Django (już jest ukryty, ale dla pewności)
+                message.style.display = 'none';
+            } else if (messageText.includes('Stół') && messageText.includes('już istnieje')) {
+                showTableExistsError(messageText);
+                message.style.display = 'none';
+            } else if (messageText.includes('Nieprawidłowe hasło')) {
+                showPasswordError(messageText);
                 message.style.display = 'none';
             }
-        } else if (messageText.includes('już istnieje')) {
-            // Błąd istniejącego stołu
-            showTableExistsError(messageText);
-            // Ukryj oryginalny komunikat Django
-            message.style.display = 'none';
-        } else if (messageText.includes('Nieprawidłowe hasło')) {
-            // Błąd nieprawidłowego hasła
-            showPasswordError(messageText);
-            // Ukryj oryginalny komunikat Django
-            message.style.display = 'none';
-        }
-    });
+        });
     
     // Sprawdź czy nick został przywrócony z sesji i podświetl pole na czerwono
     const nicknameField = document.getElementById('nickname');
@@ -775,12 +763,10 @@ let homeSocket = null;
 function connectHomeWebSocket() {
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
     const ws_path = `${ws_scheme}://${window.location.host}/ws/home/`;
-    console.log('Próba połączenia WebSocket dla strony głównej:', ws_path);
     
     homeSocket = new WebSocket(ws_path);
 
     homeSocket.onopen = function(e) {
-        console.log('Połączenie WebSocket dla strony głównej otwarte');
         // Poproś o aktualną listę stołów
         homeSocket.send(JSON.stringify({
             'action': 'get_active_tables'
@@ -788,7 +774,6 @@ function connectHomeWebSocket() {
     };
 
     homeSocket.onmessage = function(e) {
-        console.log('Otrzymano wiadomość na stronie głównej:', e.data);
         const data = JSON.parse(e.data);
         if (data.type === 'active_tables_update') {
             updateActiveTablesList(data.active_tables);
@@ -796,11 +781,11 @@ function connectHomeWebSocket() {
     };
 
     homeSocket.onerror = function(e) {
-        console.error('Błąd WebSocket dla strony głównej:', e);
+        // Próba ponownego połączenia po 2 sekundach
+        setTimeout(connectHomeWebSocket, 2000);
     };
 
     homeSocket.onclose = function(e) {
-        console.log('Połączenie WebSocket dla strony głównej zamknięte:', e);
         // Próba ponownego połączenia po 2 sekundach
         setTimeout(connectHomeWebSocket, 2000);
     };
@@ -873,19 +858,10 @@ function debugCache() {
     fetch('/api/active_tables/')
         .then(res => res.json())
         .then(data => {
-            console.log('Debug info:', data);
-            alert(`Debug Info:\n` +
-                  `Total tables: ${data.total_tables}\n` +
-                  `Cache keys found: ${data.cache_keys_found}\n` +
-                  `Cache backend: ${data.debug_info.cache_backend}\n` +
-                  `Has keys method: ${data.debug_info.has_keys_method}\n` +
-                  `Has cache attr: ${data.debug_info.has_cache_attr}\n` +
-                  `Has backend: ${data.debug_info.has_backend}\n\n` +
-                  `Active tables: ${JSON.stringify(data.active_tables, null, 2)}`);
+            // Debug info
         })
         .catch(err => {
-            console.error('Debug error:', err);
-            alert('Debug error: ' + err.message);
+            // Debug error
         });
 }
 </script>
