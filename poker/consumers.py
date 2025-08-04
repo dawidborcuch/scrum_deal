@@ -179,6 +179,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
         )
         
         # Wyślij aktualizację do strony głównej
+        print(f"DEBUG: handle_join - wysyłam broadcast_table_update do grupy home_page")
         await self.channel_layer.group_send(
             'home_page',
             {
@@ -551,6 +552,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
+        print(f"DEBUG: HomeConsumer connect - dołączono do grupy {self.home_group_name}")
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -597,6 +599,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
 
     async def broadcast_table_update(self, event):
         """Wysyła aktualizację listy stołów do wszystkich klientów na stronie głównej"""
+        print(f"DEBUG: broadcast_table_update - wywołano event: {event}")
         active_tables = []
         current_time = time.time()
         
