@@ -7,9 +7,6 @@ from channels.db import database_sync_to_async
 from django.core.cache import cache
 from django.contrib.auth.models import AnonymousUser
 
-# Globalna lista aktywnych stołów (w pamięci aplikacji)
-ACTIVE_TABLES = {}
-
 # Logger dla debug informacji
 logger = logging.getLogger(__name__)
 
@@ -57,9 +54,10 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.save_table_data(table_data)
                 
                 # Aktualizuj ACTIVE_TABLES
-                if self.table_name in ACTIVE_TABLES:
-                    ACTIVE_TABLES[self.table_name]['players'] = players_data
-                    ACTIVE_TABLES[self.table_name]['last_updated'] = time.time()
+                active_tables = await self.get_active_tables()
+                if self.table_name in active_tables:
+                    active_tables[self.table_name]['players'] = players_data
+                    active_tables[self.table_name]['last_updated'] = time.time()
                 
                 # Wyślij aktualizację do pozostałych graczy
                 await self.channel_layer.group_send(
@@ -137,8 +135,9 @@ class PokerConsumer(AsyncWebsocketConsumer):
             return
 
         # Dodatkowa walidacja w ACTIVE_TABLES
-        if self.table_name in ACTIVE_TABLES:
-            active_players = ACTIVE_TABLES[self.table_name].get('players', [])
+        active_tables = await self.get_active_tables()
+        if self.table_name in active_tables:
+            active_players = active_tables[self.table_name].get('players', [])
             if any(p['nickname'] == nickname for p in active_players):
                 # Nick już zajęty w ACTIVE_TABLES
                 await self.send(text_data=json.dumps({
@@ -163,14 +162,16 @@ class PokerConsumer(AsyncWebsocketConsumer):
         table_data['players'] = players_data
         await self.save_table_data(table_data)
         
-        # Aktualizuj globalną listę aktywnych stołów
-        ACTIVE_TABLES[self.table_name] = {
+        # Aktualizuj globalną listę aktywnych stołów w Redis
+        active_tables = await self.get_active_tables()
+        active_tables[self.table_name] = {
             'players': players_data,
             'last_updated': time.time(),
             'password': table_data.get('password')  # Dodaj hasło do globalnej listy
         }
+        await self.save_active_tables(active_tables)
         
-        logger.info(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {ACTIVE_TABLES[self.table_name]}")
+        logger.info(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {active_tables[self.table_name]}")
         
         # Wyślij aktualny stan stołu
         await self.channel_layer.group_send(
@@ -217,12 +218,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
-        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-        ACTIVE_TABLES[self.table_name] = {
+        active_tables = await self.get_active_tables()
+        existing_password = active_tables.get(self.table_name, {}).get('password')
+        active_tables[self.table_name] = {
             'players': players_data,
             'last_updated': time.time(),
             'password': existing_password
         }
+        await self.save_active_tables(active_tables)
         
         # Wyślij aktualizację do wszystkich
         await self.channel_layer.group_send(
@@ -262,12 +265,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
-        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-        ACTIVE_TABLES[self.table_name] = {
+        active_tables = await self.get_active_tables()
+        existing_password = active_tables.get(self.table_name, {}).get('password')
+        active_tables[self.table_name] = {
             'players': players_data,
             'last_updated': time.time(),
             'password': existing_password
         }
+        await self.save_active_tables(active_tables)
         
         # Wyślij aktualizację do wszystkich
         await self.channel_layer.group_send(
@@ -295,17 +300,19 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
+        active_tables = await self.get_active_tables()
         if players_data:
-            existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-            ACTIVE_TABLES[self.table_name] = {
+            existing_password = active_tables.get(self.table_name, {}).get('password')
+            active_tables[self.table_name] = {
                 'players': players_data,
                 'last_updated': time.time(),
                 'password': existing_password
             }
         else:
             # Usuń stół z globalnej listy jeśli nie ma graczy
-            if self.table_name in ACTIVE_TABLES:
-                del ACTIVE_TABLES[self.table_name]
+            if self.table_name in active_tables:
+                del active_tables[self.table_name]
+        await self.save_active_tables(active_tables)
         
         # Wyślij aktualizację do pozostałych graczy
         await self.channel_layer.group_send(
@@ -337,12 +344,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
-        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-        ACTIVE_TABLES[self.table_name] = {
+        active_tables = await self.get_active_tables()
+        existing_password = active_tables.get(self.table_name, {}).get('password')
+        active_tables[self.table_name] = {
             'players': players_data,
             'last_updated': time.time(),
             'password': existing_password
         }
+        await self.save_active_tables(active_tables)
         
         # Wyślij aktualizację do pozostałych graczy
         await self.channel_layer.group_send(
@@ -409,12 +418,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
-        existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-        ACTIVE_TABLES[self.table_name] = {
+        active_tables = await self.get_active_tables()
+        existing_password = active_tables.get(self.table_name, {}).get('password')
+        active_tables[self.table_name] = {
             'players': players_data,
             'last_updated': time.time(),
             'password': existing_password
         }
+        await self.save_active_tables(active_tables)
         
         # Wyślij aktualizację do wszystkich graczy
         await self.channel_layer.group_send(
@@ -492,26 +503,26 @@ class PokerConsumer(AsyncWebsocketConsumer):
     async def player_removed(self, event):
         await self.send(text_data=json.dumps(event))
 
-    @database_sync_to_async
-    def get_or_create_table(self):
-        table_data = cache.get(f'table_{self.table_name}')
+    async def get_or_create_table(self):
+        table_data = await self.get_table_data()
         if not table_data:
             # Sprawdź czy stół istnieje w ACTIVE_TABLES
-            if self.table_name in ACTIVE_TABLES:
+            active_tables = await self.get_active_tables()
+            if self.table_name in active_tables:
                 # Pobierz dane z ACTIVE_TABLES
-                active_table = ACTIVE_TABLES[self.table_name]
+                active_table = active_tables[self.table_name]
                 table_data = {
                     'players': active_table.get('players', []),
                     'password': active_table.get('password')
                 }
                 # Zapisz w cache
-                cache.set(f'table_{self.table_name}', table_data)
+                await self.save_table_data(table_data)
             else:
                 # Stół nie istnieje - stwórz nowy
                 table_data = {
                     'players': []
                 }
-                cache.set(f'table_{self.table_name}', table_data)
+                await self.save_table_data(table_data)
         return table_data
 
     @database_sync_to_async
@@ -521,6 +532,16 @@ class PokerConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def save_table_data(self, table_data):
         cache.set(f'table_{self.table_name}', table_data)
+
+    @database_sync_to_async
+    def get_active_tables(self):
+        """Pobiera aktywną listę stołów z Redis"""
+        return cache.get('active_tables', {})
+
+    @database_sync_to_async
+    def save_active_tables(self, active_tables):
+        """Zapisuje aktywną listę stołów do Redis"""
+        cache.set('active_tables', active_tables, timeout=3600)  # 1 godzina
 
     async def handle_ping_activity(self, data):
         """Obsługa pingowania aktywności użytkownika"""
@@ -540,12 +561,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
             await self.save_table_data(table_data)
             
             # Aktualizuj globalną listę aktywnych stołów
-            existing_password = ACTIVE_TABLES.get(self.table_name, {}).get('password')
-            ACTIVE_TABLES[self.table_name] = {
+            active_tables = await self.get_active_tables()
+            existing_password = active_tables.get(self.table_name, {}).get('password')
+            active_tables[self.table_name] = {
                 'players': players_data,
                 'last_updated': time.time(),
                 'password': existing_password
             }
+            await self.save_active_tables(active_tables)
             
 class HomeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -586,9 +609,11 @@ class HomeConsumer(AsyncWebsocketConsumer):
         active_tables = []
         current_time = time.time()
         
-        logger.info(f"DEBUG: handle_get_active_tables - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        # Pobierz ACTIVE_TABLES z Redis
+        redis_active_tables = await self.get_active_tables()
+        logger.info(f"DEBUG: handle_get_active_tables - ACTIVE_TABLES: {redis_active_tables}")
         
-        for table_name, table_info in ACTIVE_TABLES.items():
+        for table_name, table_info in redis_active_tables.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] <= 300:
                 participants = [p for p in table_info['players'] if p['role'] != 'observer']
@@ -612,9 +637,11 @@ class HomeConsumer(AsyncWebsocketConsumer):
         active_tables = []
         current_time = time.time()
         
-        logger.info(f"DEBUG: broadcast_table_update - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        # Pobierz ACTIVE_TABLES z Redis
+        redis_active_tables = await self.get_active_tables()
+        logger.info(f"DEBUG: broadcast_table_update - ACTIVE_TABLES: {redis_active_tables}")
         
-        for table_name, table_info in ACTIVE_TABLES.items():
+        for table_name, table_info in redis_active_tables.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] <= 300:
                 participants = [p for p in table_info['players'] if p['role'] != 'observer']
@@ -630,4 +657,9 @@ class HomeConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'active_tables_update',
             'active_tables': active_tables
-        })) 
+        }))
+
+    @database_sync_to_async
+    def get_active_tables(self):
+        """Pobiera aktywną listę stołów z Redis"""
+        return cache.get('active_tables', {}) 

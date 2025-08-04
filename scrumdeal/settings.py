@@ -55,7 +55,10 @@ ASGI_APPLICATION = 'scrumdeal.asgi.application'
 # Konfiguracja kanałów do testów bez Redis
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
     }
 }
 
