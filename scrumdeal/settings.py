@@ -52,16 +52,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'scrumdeal.wsgi.application'
 ASGI_APPLICATION = 'scrumdeal.asgi.application'
 
-# Konfiguracja kanałów
-import os
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-
+# Konfiguracja kanałów do testów bez Redis
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [REDIS_URL],
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
 }
 
