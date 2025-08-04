@@ -483,6 +483,10 @@ function connectWebSocket() {
         const data = JSON.parse(e.data);
         if (data.type === 'nickname_taken') {
             showNicknameError(data.message, data.nickname);
+            // Przekieruj do strony głównej po 3 sekundach
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
             return;
         }
         if (data.type === 'croupier_exists') {

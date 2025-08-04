@@ -121,11 +121,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        self.nickname = nickname  # Zapamiętaj nick gracza
-        self.role = role         # Zapamiętaj rolę gracza
-        self.is_croupier = str(is_croupier).lower() in ['1', 'true']
-
-        # Sprawdź czy gracz już istnieje
+        # ATOMICZNA WALIDACJA NICKU - sprawdź ponownie przed dodaniem
         if any(p['nickname'] == nickname for p in players_data):
             # Nick już zajęty
             await self.send(text_data=json.dumps({
@@ -134,6 +130,10 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'nickname': nickname
             }))
             return
+
+        self.nickname = nickname  # Zapamiętaj nick gracza
+        self.role = role         # Zapamiętaj rolę gracza
+        self.is_croupier = str(is_croupier).lower() in ['1', 'true']
 
         players_data.append({
             'nickname': nickname,
