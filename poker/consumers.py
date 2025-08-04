@@ -166,6 +166,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
             'password': table_data.get('password')  # Dodaj hasło do globalnej listy
         }
         
+        print(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {ACTIVE_TABLES[self.table_name]}")
+        
         # Wyślij aktualny stan stołu
         await self.channel_layer.group_send(
             self.table_group_name,
@@ -573,6 +575,8 @@ class HomeConsumer(AsyncWebsocketConsumer):
         active_tables = []
         current_time = time.time()
         
+        print(f"DEBUG: handle_get_active_tables - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        
         for table_name, table_info in ACTIVE_TABLES.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] <= 300:
@@ -585,6 +589,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
                         'observers_count': len(observers)
                     })
         
+        print(f"DEBUG: Wysyłam active_tables: {active_tables}")
         await self.send(text_data=json.dumps({
             'type': 'active_tables_update',
             'active_tables': active_tables
@@ -595,6 +600,8 @@ class HomeConsumer(AsyncWebsocketConsumer):
         active_tables = []
         current_time = time.time()
         
+        print(f"DEBUG: broadcast_table_update - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        
         for table_name, table_info in ACTIVE_TABLES.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] <= 300:
@@ -607,6 +614,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
                         'observers_count': len(observers)
                     })
         
+        print(f"DEBUG: broadcast_table_update - wysyłam: {active_tables}")
         await self.send(text_data=json.dumps({
             'type': 'active_tables_update',
             'active_tables': active_tables
