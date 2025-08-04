@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -6,7 +7,7 @@
     <title>{% block title %}ScrumDeal{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055646.png" type="image/png">
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
     <style>
         body { 
             background: #f8fafc; 
@@ -227,7 +228,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container">
         <a class="navbar-brand" href="/">
-            <img src="https://www.orange.pl/ocp-http/PL/Binary2/2006528/4109370396.svg" alt="Orange Logo" height="30" class="me-2">
+            <img src="{% static 'images/scrum_deal.png' %}" alt="ScrumDeal Logo" height="30" class="me-2">
             ScrumDeal
         </a>
     </div>
