@@ -47,11 +47,17 @@ Aplikacja będzie dostępna pod adresem: [http://127.0.0.1:8000](http://127.0.0.
 - **Błąd z importem `ScrumDeal`:** Upewnij się, że katalog z kodem to `scrumdeal` (małe litery), a nie `ScrumDeal`.
 - **Błąd z migracjami:** Usuń stare migracje z `poker/migrations/` (oprócz `__init__.py`), usuń plik `db.sqlite3` i wykonaj migracje od nowa.
 - **Błąd z odpaleniem środowiska wirtualnego:** Usuń stare środowisko wirtualne i utwórz je od nowa:
+  
    deactivate
+  
    Remove-Item -Recurse -Force .venv
+  
    python -m venv .venv
+  
    .venv\Scripts\activate
+  
    pip install -r requirements.txt
+  
 ---
 
 ## Wymagania
@@ -63,4 +69,5 @@ Aplikacja będzie dostępna pod adresem: [http://127.0.0.1:8000](http://127.0.0.
 - redis (opcjonalnie, do produkcji)
 
 ---
+
 
