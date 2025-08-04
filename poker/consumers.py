@@ -1,6 +1,7 @@
 import json
 import random
 import time
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
@@ -8,6 +9,9 @@ from django.contrib.auth.models import AnonymousUser
 
 # Globalna lista aktywnych stołów (w pamięci aplikacji)
 ACTIVE_TABLES = {}
+
+# Logger dla debug informacji
+logger = logging.getLogger(__name__)
 
 class PokerConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -166,7 +170,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
             'password': table_data.get('password')  # Dodaj hasło do globalnej listy
         }
         
-        print(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {ACTIVE_TABLES[self.table_name]}")
+        logger.info(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {ACTIVE_TABLES[self.table_name]}")
         
         # Wyślij aktualny stan stołu
         await self.channel_layer.group_send(
@@ -179,7 +183,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
         )
         
         # Wyślij aktualizację do strony głównej
-        print(f"DEBUG: handle_join - wysyłam broadcast_table_update do grupy home_page")
+        logger.info(f"DEBUG: handle_join - wysyłam broadcast_table_update do grupy home_page")
         await self.channel_layer.group_send(
             'home_page',
             {
@@ -545,7 +549,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
             
 class HomeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print(f"DEBUG: HomeConsumer connect - rozpoczynam połączenie")
+        logger.info(f"DEBUG: HomeConsumer connect - rozpoczynam połączenie")
         # Dołącz do grupy strony głównej
         self.home_group_name = 'home_page'
         await self.channel_layer.group_add(
@@ -553,9 +557,9 @@ class HomeConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-        print(f"DEBUG: HomeConsumer connect - dołączono do grupy {self.home_group_name}")
+        logger.info(f"DEBUG: HomeConsumer connect - dołączono do grupy {self.home_group_name}")
         await self.accept()
-        print(f"DEBUG: HomeConsumer connect - połączenie zaakceptowane")
+        logger.info(f"DEBUG: HomeConsumer connect - połączenie zaakceptowane")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -564,16 +568,16 @@ class HomeConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        print(f"DEBUG: HomeConsumer receive - otrzymano: {text_data}")
+        logger.info(f"DEBUG: HomeConsumer receive - otrzymano: {text_data}")
         try:
             data = json.loads(text_data)
             action = data.get('action')
-            print(f"DEBUG: HomeConsumer receive - action: {action}")
+            logger.info(f"DEBUG: HomeConsumer receive - action: {action}")
 
             if action == 'get_active_tables':
                 await self.handle_get_active_tables()
         except Exception as e:
-            print(f"DEBUG: HomeConsumer receive - błąd: {e}")
+            logger.info(f"DEBUG: HomeConsumer receive - błąd: {e}")
             # Obsługa błędu
             pass
 
@@ -582,7 +586,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
         active_tables = []
         current_time = time.time()
         
-        print(f"DEBUG: handle_get_active_tables - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        logger.info(f"DEBUG: handle_get_active_tables - ACTIVE_TABLES: {ACTIVE_TABLES}")
         
         for table_name, table_info in ACTIVE_TABLES.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
@@ -596,7 +600,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
                         'observers_count': len(observers)
                     })
         
-        print(f"DEBUG: Wysyłam active_tables: {active_tables}")
+        logger.info(f"DEBUG: Wysyłam active_tables: {active_tables}")
         await self.send(text_data=json.dumps({
             'type': 'active_tables_update',
             'active_tables': active_tables
@@ -604,11 +608,11 @@ class HomeConsumer(AsyncWebsocketConsumer):
 
     async def broadcast_table_update(self, event):
         """Wysyła aktualizację listy stołów do wszystkich klientów na stronie głównej"""
-        print(f"DEBUG: broadcast_table_update - wywołano event: {event}")
+        logger.info(f"DEBUG: broadcast_table_update - wywołano event: {event}")
         active_tables = []
         current_time = time.time()
         
-        print(f"DEBUG: broadcast_table_update - ACTIVE_TABLES: {ACTIVE_TABLES}")
+        logger.info(f"DEBUG: broadcast_table_update - ACTIVE_TABLES: {ACTIVE_TABLES}")
         
         for table_name, table_info in ACTIVE_TABLES.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
@@ -622,7 +626,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
                         'observers_count': len(observers)
                     })
         
-        print(f"DEBUG: broadcast_table_update - wysyłam: {active_tables}")
+        logger.info(f"DEBUG: broadcast_table_update - wysyłam: {active_tables}")
         await self.send(text_data=json.dumps({
             'type': 'active_tables_update',
             'active_tables': active_tables
