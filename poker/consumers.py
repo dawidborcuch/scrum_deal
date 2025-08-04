@@ -489,15 +489,22 @@ class PokerConsumer(AsyncWebsocketConsumer):
     def get_or_create_table(self):
         table_data = cache.get(f'table_{self.table_name}')
         if not table_data:
-            table_data = {
-                'players': []
-            }
-            # Sprawdź czy stół istnieje w ACTIVE_TABLES i ma hasło
+            # Sprawdź czy stół istnieje w ACTIVE_TABLES
             if self.table_name in ACTIVE_TABLES:
-                existing_password = ACTIVE_TABLES[self.table_name].get('password')
-                if existing_password:
-                    table_data['password'] = existing_password
-            cache.set(f'table_{self.table_name}', table_data)
+                # Pobierz dane z ACTIVE_TABLES
+                active_table = ACTIVE_TABLES[self.table_name]
+                table_data = {
+                    'players': active_table.get('players', []),
+                    'password': active_table.get('password')
+                }
+                # Zapisz w cache
+                cache.set(f'table_{self.table_name}', table_data)
+            else:
+                # Stół nie istnieje - stwórz nowy
+                table_data = {
+                    'players': []
+                }
+                cache.set(f'table_{self.table_name}', table_data)
         return table_data
 
     @database_sync_to_async
