@@ -3,7 +3,6 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.urls import reverse
-from .consumers import ACTIVE_TABLES  # Dodaj import ACTIVE_TABLES
 
 # Create your views here.
 
@@ -40,8 +39,10 @@ class HomeView(TemplateView):
         active_tables = []
         current_time = time.time()
         
-        # Użyj globalnej listy aktywnych stołów
-        for table_name, table_info in ACTIVE_TABLES.items():
+        # Pobierz aktywną listę stołów z cache
+        redis_active_tables = cache.get('active_tables', {})
+        
+        for table_name, table_info in redis_active_tables.items():
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] > 300:
                 continue
@@ -92,8 +93,11 @@ def join_table(request):
         import time
         current_time = time.time()
         
-        if not is_joining_existing and table_name in ACTIVE_TABLES:
-            table_info = ACTIVE_TABLES[table_name]
+        # Pobierz aktywną listę stołów z cache
+        redis_active_tables = cache.get('active_tables', {})
+        
+        if not is_joining_existing and table_name in redis_active_tables:
+            table_info = redis_active_tables[table_name]
             # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
             if current_time - table_info['last_updated'] <= 300 and table_info['players']:
                 # Stół istnieje i ma aktywnych graczy - dodaj komunikat i przekieruj z powrotem
@@ -106,14 +110,14 @@ def join_table(request):
                 request.session['last_is_croupier'] = is_croupier
                 return redirect('poker:home')
         
-        # Sprawdź czy nick jest już zajęty - użyj ACTIVE_TABLES dla spójności z consumers.py
+        # Sprawdź czy nick jest już zajęty - użyj cache dla spójności z consumers.py
         existing_players = []
         
-        # Sprawdź w ACTIVE_TABLES (priorytet)
-        if table_name in ACTIVE_TABLES:
-            existing_players = ACTIVE_TABLES[table_name].get('players', [])
+        # Sprawdź w cache (priorytet)
+        if table_name in redis_active_tables:
+            existing_players = redis_active_tables[table_name].get('players', [])
         
-        # Jeśli nie ma w ACTIVE_TABLES, sprawdź w cache
+        # Jeśli nie ma w cache, sprawdź w table cache
         if not existing_players:
             table_data = cache.get(f'table_{table_name}')
             if table_data and 'players' in table_data:
@@ -130,46 +134,50 @@ def join_table(request):
             request.session['last_role'] = role
             request.session['last_is_croupier'] = is_croupier
             return redirect('poker:home')
-            
-            # Sprawdź hasło przy dołączaniu do istniejącego stołu
-            table_password_to_check = None
-            
-            # Sprawdź hasło w ACTIVE_TABLES (priorytet)
-            if table_name in ACTIVE_TABLES:
-                table_password_to_check = ACTIVE_TABLES[table_name].get('password')
-            
-            # Jeśli nie ma w ACTIVE_TABLES, sprawdź w cache
-            if table_password_to_check is None:
-                table_data = cache.get(f'table_{table_name}')
-                if table_data:
-                    table_password_to_check = table_data.get('password')
-            
-            if is_joining_existing and table_password_to_check:
-                if not table_password or table_password != table_password_to_check:
-                    from django.contrib import messages
-                    messages.error(request, f'Nieprawidłowe hasło do stołu "{table_name}".')
-                    # Zapisz dane w sesji
-                    request.session['last_table_name'] = table_name
-                    request.session['last_nickname'] = nickname
-                    request.session['last_role'] = role
-                    request.session['last_is_croupier'] = is_croupier
-                    request.session['last_table_password'] = table_password
-                    return redirect('poker:home')
+        
+        # Sprawdź hasło przy dołączaniu do istniejącego stołu
+        table_password_to_check = None
+        
+        # Sprawdź hasło w cache (priorytet)
+        if table_name in redis_active_tables:
+            table_password_to_check = redis_active_tables[table_name].get('password')
+        
+        # Jeśli nie ma w cache, sprawdź w table cache
+        if table_password_to_check is None:
+            table_data = cache.get(f'table_{table_name}')
+            if table_data:
+                table_password_to_check = table_data.get('password')
+        
+        if is_joining_existing and table_password_to_check:
+            if not table_password or table_password != table_password_to_check:
+                from django.contrib import messages
+                messages.error(request, f'Nieprawidłowe hasło do stołu "{table_name}".')
+                # Zapisz dane w sesji
+                request.session['last_table_name'] = table_name
+                request.session['last_nickname'] = nickname
+                request.session['last_role'] = role
+                request.session['last_is_croupier'] = is_croupier
+                request.session['last_table_password'] = table_password
+                return redirect('poker:home')
         
         # Nick jest dostępny - zapisz w sesji i przekieruj do stołu
         request.session['nickname'] = nickname
         request.session['role'] = role
         request.session['is_croupier'] = is_croupier
         
-        # Jeśli tworzysz nowy stół BEZ hasła, usuń hasło z cache i ACTIVE_TABLES
+        # Pobierz aktualne dane stołu
+        table_data = cache.get(f'table_{table_name}')
+        
+        # Jeśli tworzysz nowy stół BEZ hasła, usuń hasło z cache
         if not is_joining_existing and not enable_password:
             if table_data and 'password' in table_data:
                 del table_data['password']
                 cache.set(f'table_{table_name}', table_data, 3600)
-            if table_name in ACTIVE_TABLES and 'password' in ACTIVE_TABLES[table_name]:
-                del ACTIVE_TABLES[table_name]['password']
+            if table_name in redis_active_tables and 'password' in redis_active_tables[table_name]:
+                del redis_active_tables[table_name]['password']
+                cache.set('active_tables', redis_active_tables, 3600)
         
-        # Jeśli tworzysz nowy stół i włączono hasło, zapisz je w cache i ACTIVE_TABLES
+        # Jeśli tworzysz nowy stół i włączono hasło, zapisz je w cache
         if not is_joining_existing and enable_password and table_password:
             # Zapisz hasło w cache dla nowego stołu
             if not table_data:
@@ -178,14 +186,14 @@ def join_table(request):
                 table_data['password'] = table_password
             cache.set(f'table_{table_name}', table_data, 3600)  # Cache na 1 godzinę
             
-            # Dodaj stół do ACTIVE_TABLES z hasłem (jeśli jeszcze nie istnieje)
-            import time
-            if table_name not in ACTIVE_TABLES:
-                ACTIVE_TABLES[table_name] = {
+            # Dodaj stół do cache z hasłem (jeśli jeszcze nie istnieje)
+            if table_name not in redis_active_tables:
+                redis_active_tables[table_name] = {
                     'players': [],
                     'last_updated': time.time(),
                     'password': table_password
                 }
+                cache.set('active_tables', redis_active_tables, 3600)
         
         return redirect(reverse('poker:table', args=[table_name]))
     return redirect('poker:home')
@@ -220,10 +228,11 @@ def check_table_password(request, table_name):
         password = table_data.get('password')
         has_password = bool(password) and password != ""
     
-    # Jeśli nie ma w cache, sprawdź w ACTIVE_TABLES
+    # Jeśli nie ma w cache, sprawdź w active_tables
     if not has_password:
-        if table_name in ACTIVE_TABLES:
-            password = ACTIVE_TABLES[table_name].get('password')
+        redis_active_tables = cache.get('active_tables', {})
+        if table_name in redis_active_tables:
+            password = redis_active_tables[table_name].get('password')
             has_password = bool(password) and password != ""
     
     return JsonResponse({'has_password': has_password})
@@ -235,8 +244,10 @@ def get_active_tables_api(request):
     active_tables = []
     current_time = time.time()
     
-    # Użyj globalnej listy aktywnych stołów
-    for table_name, table_info in ACTIVE_TABLES.items():
+    # Pobierz aktywną listę stołów z cache
+    redis_active_tables = cache.get('active_tables', {})
+    
+    for table_name, table_info in redis_active_tables.items():
         # Sprawdź czy stół nie jest zbyt stary (więcej niż 5 minut)
         if current_time - table_info['last_updated'] > 300:
             continue
@@ -265,9 +276,9 @@ def get_active_tables_api(request):
     return JsonResponse({
         'active_tables': active_tables,
         'total_tables': len(active_tables),
-        'global_tables_count': len(ACTIVE_TABLES),
+        'global_tables_count': len(redis_active_tables),
         'debug_info': {
-            'global_tables': list(ACTIVE_TABLES.keys()),
+            'global_tables': list(redis_active_tables.keys()),
             'current_time': current_time
         }
     })
@@ -282,15 +293,17 @@ def ping_activity(request, table_name):
         # Zaktualizuj czas aktywności w cache
         import time
         
-        if table_name in ACTIVE_TABLES:
+        redis_active_tables = cache.get('active_tables', {})
+        if table_name in redis_active_tables:
             # Znajdź gracza i zaktualizuj jego czas aktywności
-            for player in ACTIVE_TABLES[table_name]['players']:
+            for player in redis_active_tables[table_name]['players']:
                 if player.get('nickname') == nickname:
                     player['last_activity'] = time.time()
                     break
             
             # Zaktualizuj czas ostatniej aktywności stołu
-            ACTIVE_TABLES[table_name]['last_updated'] = time.time()
+            redis_active_tables[table_name]['last_updated'] = time.time()
+            cache.set('active_tables', redis_active_tables, 3600)
         
         return JsonResponse({'success': True})
     
