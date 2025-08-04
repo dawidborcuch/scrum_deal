@@ -122,6 +122,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
             return
 
         # ATOMICZNA WALIDACJA NICKU - sprawdź ponownie przed dodaniem
+        # Dodatkowo sprawdź w ACTIVE_TABLES dla większej pewności
         if any(p['nickname'] == nickname for p in players_data):
             # Nick już zajęty
             await self.send(text_data=json.dumps({
@@ -130,6 +131,18 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'nickname': nickname
             }))
             return
+
+        # Dodatkowa walidacja w ACTIVE_TABLES
+        if self.table_name in ACTIVE_TABLES:
+            active_players = ACTIVE_TABLES[self.table_name].get('players', [])
+            if any(p['nickname'] == nickname for p in active_players):
+                # Nick już zajęty w ACTIVE_TABLES
+                await self.send(text_data=json.dumps({
+                    'type': 'nickname_taken',
+                    'message': f'Nick "{nickname}" jest już zajęty przy tym stole. Wybierz inny.',
+                    'nickname': nickname
+                }))
+                return
 
         self.nickname = nickname  # Zapamiętaj nick gracza
         self.role = role         # Zapamiętaj rolę gracza

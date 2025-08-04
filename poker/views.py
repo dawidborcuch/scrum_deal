@@ -3,6 +3,7 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.urls import reverse
+from .consumers import ACTIVE_TABLES  # Dodaj import ACTIVE_TABLES
 
 # Create your views here.
 
@@ -34,7 +35,6 @@ class HomeView(TemplateView):
     
     def get_active_tables(self):
         """Pobiera listę stołów z aktywnymi graczami"""
-        from .consumers import ACTIVE_TABLES
         import time
         
         active_tables = []
@@ -89,7 +89,6 @@ def join_table(request):
             return redirect('poker:home')
         
         # Sprawdź czy stół już istnieje i ma aktywnych graczy (tylko przy tworzeniu nowego stołu)
-        from .consumers import ACTIVE_TABLES
         import time
         current_time = time.time()
         
@@ -107,24 +106,46 @@ def join_table(request):
                 request.session['last_is_croupier'] = is_croupier
                 return redirect('poker:home')
         
-        # Sprawdź czy nick jest już zajęty w cache
-        table_data = cache.get(f'table_{table_name}')
-        if table_data and 'players' in table_data:
-            existing_players = table_data['players']
-            if any(p.get('nickname') == nickname for p in existing_players):
-                # Nick jest zajęty - dodaj komunikat i przekieruj z powrotem do strony głównej
-                from django.contrib import messages
-                messages.error(request, f'Nick "{nickname}" jest już zajęty przy stole "{table_name}". Wybierz inny nick.')
-                # Zapisz nazwę stołu w sesji, aby ją przywrócić na stronie głównej
-                request.session['last_table_name'] = table_name
-                request.session['last_nickname'] = nickname
-                request.session['last_role'] = role
-                request.session['last_is_croupier'] = is_croupier
-                return redirect('poker:home')
+        # Sprawdź czy nick jest już zajęty - użyj ACTIVE_TABLES dla spójności z consumers.py
+        existing_players = []
+        
+        # Sprawdź w ACTIVE_TABLES (priorytet)
+        if table_name in ACTIVE_TABLES:
+            existing_players = ACTIVE_TABLES[table_name].get('players', [])
+        
+        # Jeśli nie ma w ACTIVE_TABLES, sprawdź w cache
+        if not existing_players:
+            table_data = cache.get(f'table_{table_name}')
+            if table_data and 'players' in table_data:
+                existing_players = table_data['players']
+        
+        # Sprawdź czy nick jest zajęty
+        if any(p.get('nickname') == nickname for p in existing_players):
+            # Nick jest zajęty - dodaj komunikat i przekieruj z powrotem do strony głównej
+            from django.contrib import messages
+            messages.error(request, f'Nick "{nickname}" jest już zajęty przy stole "{table_name}". Wybierz inny nick.')
+            # Zapisz nazwę stołu w sesji, aby ją przywrócić na stronie głównej
+            request.session['last_table_name'] = table_name
+            request.session['last_nickname'] = nickname
+            request.session['last_role'] = role
+            request.session['last_is_croupier'] = is_croupier
+            return redirect('poker:home')
             
             # Sprawdź hasło przy dołączaniu do istniejącego stołu
-            if is_joining_existing and table_data.get('password'):
-                if not table_password or table_password != table_data['password']:
+            table_password_to_check = None
+            
+            # Sprawdź hasło w ACTIVE_TABLES (priorytet)
+            if table_name in ACTIVE_TABLES:
+                table_password_to_check = ACTIVE_TABLES[table_name].get('password')
+            
+            # Jeśli nie ma w ACTIVE_TABLES, sprawdź w cache
+            if table_password_to_check is None:
+                table_data = cache.get(f'table_{table_name}')
+                if table_data:
+                    table_password_to_check = table_data.get('password')
+            
+            if is_joining_existing and table_password_to_check:
+                if not table_password or table_password != table_password_to_check:
                     from django.contrib import messages
                     messages.error(request, f'Nieprawidłowe hasło do stołu "{table_name}".')
                     # Zapisz dane w sesji
@@ -158,7 +179,6 @@ def join_table(request):
             cache.set(f'table_{table_name}', table_data, 3600)  # Cache na 1 godzinę
             
             # Dodaj stół do ACTIVE_TABLES z hasłem (jeśli jeszcze nie istnieje)
-            from .consumers import ACTIVE_TABLES
             import time
             if table_name not in ACTIVE_TABLES:
                 ACTIVE_TABLES[table_name] = {
@@ -202,7 +222,6 @@ def check_table_password(request, table_name):
     
     # Jeśli nie ma w cache, sprawdź w ACTIVE_TABLES
     if not has_password:
-        from .consumers import ACTIVE_TABLES
         if table_name in ACTIVE_TABLES:
             password = ACTIVE_TABLES[table_name].get('password')
             has_password = bool(password) and password != ""
@@ -211,7 +230,6 @@ def check_table_password(request, table_name):
 
 def get_active_tables_api(request):
     """API endpoint do pobierania aktywnych stołów"""
-    from .consumers import ACTIVE_TABLES
     import time
     
     active_tables = []
@@ -262,7 +280,6 @@ def ping_activity(request, table_name):
             return JsonResponse({'success': False, 'error': 'Brak nicku'})
         
         # Zaktualizuj czas aktywności w cache
-        from .consumers import ACTIVE_TABLES
         import time
         
         if table_name in ACTIVE_TABLES:
