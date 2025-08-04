@@ -545,6 +545,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
             
 class HomeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        print(f"DEBUG: HomeConsumer connect - rozpoczynam połączenie")
         # Dołącz do grupy strony głównej
         self.home_group_name = 'home_page'
         await self.channel_layer.group_add(
@@ -554,6 +555,7 @@ class HomeConsumer(AsyncWebsocketConsumer):
         
         print(f"DEBUG: HomeConsumer connect - dołączono do grupy {self.home_group_name}")
         await self.accept()
+        print(f"DEBUG: HomeConsumer connect - połączenie zaakceptowane")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -562,13 +564,16 @@ class HomeConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
+        print(f"DEBUG: HomeConsumer receive - otrzymano: {text_data}")
         try:
             data = json.loads(text_data)
             action = data.get('action')
+            print(f"DEBUG: HomeConsumer receive - action: {action}")
 
             if action == 'get_active_tables':
                 await self.handle_get_active_tables()
         except Exception as e:
+            print(f"DEBUG: HomeConsumer receive - błąd: {e}")
             # Obsługa błędu
             pass
 
