@@ -56,8 +56,12 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 # Aktualizuj ACTIVE_TABLES
                 active_tables = await self.get_active_tables()
                 if self.table_name in active_tables:
-                    active_tables[self.table_name]['players'] = players_data
-                    active_tables[self.table_name]['last_updated'] = time.time()
+                    if players_data:  # Jeśli są jeszcze gracze
+                        active_tables[self.table_name]['players'] = players_data
+                        active_tables[self.table_name]['last_updated'] = time.time()
+                    else:  # Jeśli nie ma graczy, usuń stół
+                        del active_tables[self.table_name]
+                    await self.save_active_tables(active_tables)
                 
                 # Wyślij aktualizację do pozostałych graczy
                 await self.channel_layer.group_send(
