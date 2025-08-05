@@ -797,6 +797,9 @@ function updateActiveTablesList(activeTables) {
     const activeTablesCounter = document.getElementById('activeTablesCounter');
     if (!activeTablesContainer) return;
     
+    // Zapisz pełne dane o stołach dla walidacji nicków
+    window.currentActiveTables = activeTables;
+    
     // Aktualizuj licznik
     if (activeTablesCounter) {
         activeTablesCounter.textContent = activeTables.length;
@@ -888,6 +891,24 @@ function validateAndJoin(event) {
         return false;
     }
     
+    // Sprawdź czy nick jest już zajęty w jakimkolwiek aktywnym stole
+    // Pobierz dane o graczach z WebSocket
+    if (homeSocket && homeSocket.readyState === WebSocket.OPEN) {
+        // Wyślij zapytanie o aktywne stoły z graczami
+        homeSocket.send(JSON.stringify({
+            'action': 'get_active_tables'
+        }));
+        
+        // Sprawdź czy nick jest zajęty w aktualnych danych
+        const currentActiveTables = window.currentActiveTables || [];
+        for (const table of currentActiveTables) {
+            if (table.players && table.players.some(player => player.nickname === nickname)) {
+                showNicknameModal(`Nick "${nickname}" jest już zajęty w stole "${table.name}". Wybierz inny nick.`, nickname);
+                return false;
+            }
+        }
+    }
+    
     // Jeśli wszystko OK, prześlij formularz normalnie
     form.submit();
     return true;
@@ -923,6 +944,18 @@ function validateQuickJoin(event) {
     if (!activeTables.includes(tableName)) {
         showNicknameModal(`Stół "${tableName}" nie istnieje lub nie jest już aktywny.`, nickname);
         return false;
+    }
+    
+    // Sprawdź czy nick jest już zajęty w tym stole lub innych stołach
+    if (homeSocket && homeSocket.readyState === WebSocket.OPEN) {
+        // Sprawdź czy nick jest zajęty w aktualnych danych
+        const currentActiveTables = window.currentActiveTables || [];
+        for (const table of currentActiveTables) {
+            if (table.players && table.players.some(player => player.nickname === nickname)) {
+                showNicknameModal(`Nick "${nickname}" jest już zajęty w stole "${table.name}". Wybierz inny nick.`, nickname);
+                return false;
+            }
+        }
     }
     
     // Jeśli wszystko OK, prześlij formularz normalnie

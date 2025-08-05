@@ -627,7 +627,8 @@ class HomeConsumer(AsyncWebsocketConsumer):
                     active_tables.append({
                         'name': table_name,
                         'participants_count': len(participants),
-                        'observers_count': len(observers)
+                        'observers_count': len(observers),
+                        'players': table_info['players']  # Dodaj pełne dane o graczach
                     })
         
         logger.info(f"DEBUG: Wysyłam active_tables: {active_tables}")
@@ -655,7 +656,8 @@ class HomeConsumer(AsyncWebsocketConsumer):
                     active_tables.append({
                         'name': table_name,
                         'participants_count': len(participants),
-                        'observers_count': len(observers)
+                        'observers_count': len(observers),
+                        'players': table_info['players']  # Dodaj pełne dane o graczach
                     })
         
         logger.info(f"DEBUG: broadcast_table_update - wysyłam: {active_tables}")
