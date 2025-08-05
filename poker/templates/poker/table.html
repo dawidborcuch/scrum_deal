@@ -543,7 +543,19 @@ function connectWebSocket() {
             window.location.href = '/';
             return;
         }
-        if (data.type === 'player_joined' || data.type === 'vote_cast' || data.type === 'player_removed') {
+        if (data.type === 'player_removed') {
+            // Sprawdź czy to ja zostałem usunięty
+            if (data.removed_nickname === nickname) {
+                alert('Zostałeś usunięty ze stołu przez krupiera.');
+                window.location.href = '/';
+                return;
+            }
+            // Aktualizuj listę graczy dla pozostałych
+            updatePlayersList(data.players, data.all_voted);
+            updateCardsState(data.players, data.all_voted);
+            return;
+        }
+        if (data.type === 'player_joined' || data.type === 'vote_cast') {
             updatePlayersList(data.players, data.all_voted);
             updateCardsState(data.players, data.all_voted);
         } else if (data.type === 'table_reset') {

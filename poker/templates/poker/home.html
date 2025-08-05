@@ -145,7 +145,7 @@
             </div>
             <div class="card-body">
                 <p class="text-center mb-4">Utwórz stół, aby rozpocząć. Wybierz nick, rolę i opcjonalnie zostań krupierem.</p>
-                <form id="joinForm" method="post" action="{% url 'poker:join_table' %}">
+                <form id="joinForm" method="post" action="{% url 'poker:join_table' %}" onsubmit="return validateAndJoin(event)">
                     {% csrf_token %}
                     <input type="hidden" name="is_joining_existing" value="off">
                     <div class="mb-3">
@@ -296,7 +296,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                                 <form id="quickJoinForm" method="post" action="{% url 'poker:join_table' %}">
+                                 <form id="quickJoinForm" method="post" action="{% url 'poker:join_table' %}" onsubmit="return validateQuickJoin(event)">
                      {% csrf_token %}
                      <input type="hidden" id="quickJoinTableName" name="table_name">
                      <input type="hidden" name="is_joining_existing" value="on">
@@ -854,6 +854,127 @@ function updateActiveTablesList(activeTables) {
 
 // Inicjalizacja WebSocket dla strony głównej
 connectHomeWebSocket();
+
+// Funkcja do walidacji nicku przez WebSocket
+function validateAndJoin(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const tableName = formData.get('table_name');
+    const nickname = formData.get('nickname');
+    const role = formData.get('role');
+    const isCroupier = formData.get('is_croupier') === 'on';
+    const enablePassword = formData.get('enable_password') === 'on';
+    const tablePassword = formData.get('table_password');
+    
+    // Sprawdź czy nick jest zajęty w aktywnych stołach
+    const activeTablesContainer = document.getElementById('activeTablesContainer');
+    const activeTables = [];
+    
+    // Pobierz dane z DOM
+    const tableElements = activeTablesContainer.querySelectorAll('.table-card');
+    tableElements.forEach(element => {
+        const tableNameElement = element.querySelector('.text-primary');
+        if (tableNameElement) {
+            activeTables.push(tableNameElement.textContent.trim());
+        }
+    });
+    
+    // Sprawdź czy stół już istnieje
+    if (activeTables.includes(tableName)) {
+        showNicknameModal(`Stół "${tableName}" już istnieje. Wybierz inną nazwę stołu.`, nickname);
+        return false;
+    }
+    
+    // Jeśli wszystko OK, prześlij formularz normalnie
+    form.submit();
+    return true;
+}
+
+// Funkcja do walidacji quick join
+function validateQuickJoin(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const tableName = formData.get('table_name');
+    const nickname = formData.get('nickname');
+    const role = formData.get('role');
+    const isCroupier = formData.get('is_croupier') === 'on';
+    const tablePassword = formData.get('table_password');
+    
+    // Sprawdź czy nick jest zajęty w aktywnych stołach
+    const activeTablesContainer = document.getElementById('activeTablesContainer');
+    const activeTables = [];
+    
+    // Pobierz dane z DOM
+    const tableElements = activeTablesContainer.querySelectorAll('.table-card');
+    tableElements.forEach(element => {
+        const tableNameElement = element.querySelector('.text-primary');
+        if (tableNameElement) {
+            activeTables.push(tableNameElement.textContent.trim());
+        }
+    });
+    
+    // Sprawdź czy stół istnieje
+    if (!activeTables.includes(tableName)) {
+        showNicknameModal(`Stół "${tableName}" nie istnieje lub nie jest już aktywny.`, nickname);
+        return false;
+    }
+    
+    // Jeśli wszystko OK, prześlij formularz normalnie
+    form.submit();
+    return true;
+}
+
+// Funkcja do wyświetlania modala z błędem nicku
+function showNicknameModal(message, nickname) {
+    const modal = document.createElement('div');
+    modal.id = 'nicknameModal';
+    modal.className = 'modal fade show';
+    modal.style.display = 'block';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.zIndex = '9999';
+    
+    modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Błąd
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeNicknameModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">${message}</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Sprawdź dane i spróbuj ponownie.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="closeNicknameModal()">
+                        OK, rozumiem
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeNicknameModal() {
+    const modal = document.getElementById('nicknameModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
+    }
+}
 
 function debugCache() {
     fetch('/api/active_tables/')

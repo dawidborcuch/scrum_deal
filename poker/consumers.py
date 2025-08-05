@@ -318,13 +318,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 del active_tables[self.table_name]
         await self.save_active_tables(active_tables)
         
-        # Wyślij aktualizację do pozostałych graczy
+        # Wyślij specjalny komunikat do usuniętego gracza
         await self.channel_layer.group_send(
             self.table_group_name,
             {
                 'type': 'player_removed',
                 'players': players_data,
-                'all_voted': all(player['has_voted'] for player in players_data)
+                'all_voted': all(player['has_voted'] for player in players_data),
+                'removed_nickname': nickname_to_remove  # Dodaj informację o usuniętym graczu
             }
         )
 
