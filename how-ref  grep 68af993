@@ -1,0 +1,10 @@
+[33m60aba5f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Naprawa bugow3
+[33m9ac04f5[m Naprawa bugow2
+[33mfc237e0[m Naprawa bugow
+[33m1a26693[m Naprawa responsywności: sekcja Aktywne stoły nie zasłania stopki na urządzeniach mobilnych
+[33m86bbcbc[m Naprawa: usuwanie graczy z active_tables przy disconnect i usuwanie pustych stołów
+[33m6b8d06b[m Aktualizacja views.py - usunięcie importu ACTIVE_TABLES i przełączenie na cache
+[33m3bf7773[m Przeniesienie ACTIVE_TABLES do Redis - rozwiązanie problemu z synchronizacją między workerami
+[33m8a8a600[m Zamiana print na logger.info - debug informacje będą widoczne w logach gunicorn
+[33m26a3494[m Dodanie debug do HomeConsumer - sprawdzenie czy WebSocket się łączy i otrzymuje wiadomości
+[33ma9f78cf[m Dodanie debug do WebSocket broadcast - sprawdzenie czy HomeConsumer się łączy i czy broadcast jest wywoływany

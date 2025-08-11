@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
 from django.contrib.auth.models import AnonymousUser
+from .models import VotingHistory, VotingResult
 
 # Logger dla debug informacji
 logger = logging.getLogger(__name__)
@@ -100,6 +101,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.handle_become_croupier()
             elif action == 'ping_activity':
                 await self.handle_ping_activity(data)
+            elif action == 'get_voting_history':
+                await self.handle_get_voting_history()
         except Exception as e:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -262,6 +265,10 @@ class PokerConsumer(AsyncWebsocketConsumer):
             return
 
         players_data = table_data.get('players', [])
+        
+        # Zapisz historię głosowania przed resetem
+        await self.save_voting_history(players_data)
+        
         for player in players_data:
             player['has_voted'] = False
             player['vote'] = None
@@ -547,6 +554,72 @@ class PokerConsumer(AsyncWebsocketConsumer):
     def save_active_tables(self, active_tables):
         """Zapisuje aktywną listę stołów do Redis"""
         cache.set('active_tables', active_tables, timeout=3600)  # 1 godzina
+
+    async def save_voting_history(self, players_data):
+        """Zapisuje historię głosowania do bazy danych"""
+        # Sprawdź czy ktoś głosował
+        voted_players = [p for p in players_data if p.get('has_voted') and p.get('vote') is not None]
+        if not voted_players:
+            return  # Nie zapisuj jeśli nikt nie głosował
+        
+        # Pobierz następny numer rundy
+        next_round = await self.get_next_voting_round()
+        
+        # Zapisz historię głosowania
+        await self.create_voting_history(next_round, voted_players)
+
+    @database_sync_to_async
+    def get_next_voting_round(self):
+        """Pobiera następny numer rundy głosowania dla stołu"""
+        last_history = VotingHistory.objects.filter(table_name=self.table_name).order_by('-voting_round').first()
+        return (last_history.voting_round + 1) if last_history else 1
+
+    @database_sync_to_async
+    def create_voting_history(self, voting_round, voted_players):
+        """Tworzy nowy wpis w historii głosowań"""
+        history = VotingHistory.objects.create(
+            table_name=self.table_name,
+            voting_round=voting_round
+        )
+        
+        # Zapisz wyniki głosowania
+        for player in voted_players:
+            VotingResult.objects.create(
+                voting_history=history,
+                player_nickname=player['nickname'],
+                vote_value=player['vote']
+            )
+
+    async def handle_get_voting_history(self):
+        """Obsługuje żądanie pobrania historii głosowań"""
+        history = await self.get_voting_history()
+        await self.send(text_data=json.dumps({
+            'type': 'voting_history',
+            'history': history
+        }))
+
+    @database_sync_to_async
+    def get_voting_history(self):
+        """Pobiera historię głosowań dla stołu"""
+        histories = VotingHistory.objects.filter(table_name=self.table_name).order_by('-voting_round')[:10]
+        result = []
+        
+        for history in histories:
+            voting_data = {
+                'round': history.voting_round,
+                'created_at': history.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'results': []
+            }
+            
+            for result_obj in history.results.all():
+                voting_data['results'].append({
+                    'player': result_obj.player_nickname,
+                    'vote': result_obj.vote_value
+                })
+            
+            result.append(voting_data)
+        
+        return result
 
     async def handle_ping_activity(self, data):
         """Obsługa pingowania aktywności użytkownika"""

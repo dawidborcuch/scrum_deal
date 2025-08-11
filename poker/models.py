@@ -28,3 +28,26 @@ class Player(models.Model):
 
     def __str__(self):
         return f"{self.nickname} at {self.table.name}"
+
+class VotingHistory(models.Model):
+    table_name = models.CharField(max_length=100)
+    voting_round = models.IntegerField()  # Numer rundy głosowania (1, 2, 3, ...)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('table_name', 'voting_round')
+        ordering = ['-voting_round']  # Najnowsze na górze
+
+    def __str__(self):
+        return f"Stół {self.table_name} - Runda {self.voting_round}"
+
+class VotingResult(models.Model):
+    voting_history = models.ForeignKey(VotingHistory, on_delete=models.CASCADE, related_name='results')
+    player_nickname = models.CharField(max_length=100)
+    vote_value = models.IntegerField()
+    
+    class Meta:
+        unique_together = ('voting_history', 'player_nickname')
+
+    def __str__(self):
+        return f"{self.player_nickname}: {self.vote_value} (Runda {self.voting_history.voting_round})"
