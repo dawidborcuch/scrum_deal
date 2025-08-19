@@ -636,15 +636,15 @@ function connectWebSocket() {
             return;
         }
         if (data.type === 'player_joined' || data.type === 'vote_cast') {
-            updatePlayersList(data.players, data.all_voted);
-            updateCardsState(data.players, data.all_voted);
+            updatePlayersList(data.players, data.all_voted, data.voting_completed);
+            updateCardsState(data.players, data.all_voted, data.voting_completed);
         } else if (data.type === 'table_reset') {
             document.querySelectorAll('.poker-card').forEach(c => {
                 c.classList.remove('selected');
                 c.classList.remove('disabled');
             });
             hasVoted = false;
-            updatePlayersList(data.players, false);
+            updatePlayersList(data.players, false, false);
             updateCardsState(data.players, false);
         } else if (data.type === 'voting_history') {
             showVotingHistory(data.history);
@@ -661,7 +661,7 @@ function connectWebSocket() {
     };
 }
 
-function updatePlayersList(players, allVoted) {
+function updatePlayersList(players, allVoted, votingCompleted = false) {
     // Zapisz aktualny stan graczy dla statystyk
     window.lastPlayers = players;
     
@@ -687,11 +687,11 @@ function updatePlayersList(players, allVoted) {
         let voteCard = '';
         
         if (player.has_voted) {
-            // Sprawdź czy nick kończy się na 'a' dla odpowiedniej odmiany
-            const isFemale = player.nickname.toLowerCase().endsWith('a');
+            // Sprawdź czy nick kończy się na 'a' dla odpowiedniej odmiany (z wyjątkiem "Kuba")
+            const isFemale = player.nickname.toLowerCase().endsWith('a') && player.nickname.toLowerCase() !== 'kuba';
             const voteText = isFemale ? 'Zagłosowała' : 'Zagłosował';
             
-            if (role === 'observer' || allVoted) {
+            if (role === 'observer' || allVoted || votingCompleted) {
                 // Pokaż tylko głos jako cyfrę bez tekstu i bez otoczki
                 voteDisplay = '';
                 voteCard = `
@@ -852,7 +852,7 @@ function assignCroupier(nicknameToAssign) {
     pingActivity();
 }
 
-function updateCardsState(players, allVotedParam) {
+function updateCardsState(players, allVotedParam, votingCompletedParam = false) {
     const currentPlayer = players.find(p => p.nickname === nickname);
     
     // Sprawdź aktualną rolę gracza z danych z backendu
@@ -865,7 +865,7 @@ function updateCardsState(players, allVotedParam) {
         return;
     }
 
-    // Blokuj karty tylko jeśli wszyscy uczestnicy zagłosowali
+    // Blokuj karty jeśli wszyscy uczestnicy zagłosowali lub głosowanie jest zakończone
     if (typeof allVotedParam === 'undefined') {
         // fallback na stary sposób
         allVotedParam = false;
@@ -875,8 +875,9 @@ function updateCardsState(players, allVotedParam) {
         }
     }
     window.lastAllVoted = allVotedParam;
+    window.lastVotingCompleted = votingCompletedParam;
 
-    if (allVotedParam) {
+    if (allVotedParam || votingCompletedParam) {
         document.querySelectorAll('.poker-card').forEach(card => {
             card.classList.add('disabled');
         });
@@ -947,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 vote: null
             };
         });
-        updatePlayersList(players, false);
+        updatePlayersList(players, false, false);
     });
 
     document.getElementById('becomeCroupierButton').addEventListener('click', function() {

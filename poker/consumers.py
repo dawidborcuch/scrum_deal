@@ -182,13 +182,17 @@ class PokerConsumer(AsyncWebsocketConsumer):
         
         logger.info(f"DEBUG: handle_join - Dodano stół {self.table_name} do ACTIVE_TABLES: {active_tables[self.table_name]}")
         
+        # Sprawdź czy głosowanie było już zakończone
+        voting_completed = table_data.get('voting_completed', False)
+        
         # Wyślij aktualny stan stołu
         await self.channel_layer.group_send(
             self.table_group_name,
             {
                 'type': 'player_joined',
                 'players': players_data,
-                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant'),
+                'voting_completed': voting_completed
             }
         )
         
@@ -224,6 +228,11 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 break
 
         all_voted = all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+        
+        # Jeśli wszyscy zagłosowali, oznacz głosowanie jako zakończone
+        if all_voted:
+            table_data['voting_completed'] = True
+        
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
@@ -242,7 +251,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'vote_cast',
                 'players': players_data,
-                'all_voted': all_voted
+                'all_voted': all_voted,
+                'voting_completed': table_data.get('voting_completed', False)
             }
         )
         
@@ -275,6 +285,9 @@ class PokerConsumer(AsyncWebsocketConsumer):
             player['has_voted'] = False
             player['vote'] = None
 
+        # Resetuj stan głosowania
+        table_data['voting_completed'] = False
+        
         await self.save_table_data(table_data)
         
         # Aktualizuj globalną listę aktywnych stołów
@@ -293,7 +306,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'table_reset',
                 'players': players_data,
-                'all_voted': False
+                'all_voted': False,
+                'voting_completed': False
             }
         )
 
@@ -327,6 +341,9 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 del active_tables[self.table_name]
         await self.save_active_tables(active_tables)
         
+        # Sprawdź czy głosowanie było już zakończone
+        voting_completed = table_data.get('voting_completed', False)
+        
         # Wyślij specjalny komunikat do usuniętego gracza
         await self.channel_layer.group_send(
             self.table_group_name,
@@ -334,6 +351,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 'type': 'player_removed',
                 'players': players_data,
                 'all_voted': all(player['has_voted'] for player in players_data),
+                'voting_completed': voting_completed,
                 'removed_nickname': nickname_to_remove  # Dodaj informację o usuniętym graczu
             }
         )
@@ -367,13 +385,17 @@ class PokerConsumer(AsyncWebsocketConsumer):
         }
         await self.save_active_tables(active_tables)
         
+        # Sprawdź czy głosowanie było już zakończone
+        voting_completed = table_data.get('voting_completed', False)
+        
         # Wyślij aktualizację do pozostałych graczy
         await self.channel_layer.group_send(
             self.table_group_name,
             {
                 'type': 'player_joined',
                 'players': players_data,
-                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant'),
+                'voting_completed': voting_completed
             }
         )
         
@@ -441,13 +463,17 @@ class PokerConsumer(AsyncWebsocketConsumer):
         }
         await self.save_active_tables(active_tables)
         
+        # Sprawdź czy głosowanie było już zakończone
+        voting_completed = table_data.get('voting_completed', False)
+        
         # Wyślij aktualizację do wszystkich graczy
         await self.channel_layer.group_send(
             self.table_group_name,
             {
                 'type': 'player_joined',
                 'players': players_data,
-                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant'),
+                'voting_completed': voting_completed
             }
         )
         
@@ -463,6 +489,7 @@ class PokerConsumer(AsyncWebsocketConsumer):
         # Wysyłaj jawne głosy tylko do obserwatora
         players = event['players']
         all_voted = event['all_voted']
+        voting_completed = event.get('voting_completed', False)
         role = getattr(self, 'role', 'participant')
         # USTAWIENIE self.is_croupier na podstawie aktualnych danych
         current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
@@ -474,20 +501,22 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 # Obserwator widzi głosy zawsze
                 pass
             else:
-                # Uczestnik widzi głosy tylko jeśli wszyscy zagłosowali
-                if not all_voted and p['vote'] is not None:
+                # Uczestnik widzi głosy tylko jeśli wszyscy zagłosowali lub głosowanie jest zakończone
+                if not (all_voted or voting_completed) and p['vote'] is not None:
                     p_copy['vote'] = None
             players_to_send.append(p_copy)
         await self.send(text_data=json.dumps({
             'type': event['type'],
             'players': players_to_send,
-            'all_voted': all_voted
+            'all_voted': all_voted,
+            'voting_completed': voting_completed
         }))
 
     async def vote_cast(self, event):
         # Wysyłaj jawne głosy tylko do obserwatora
         players = event['players']
         all_voted = event['all_voted']
+        voting_completed = event.get('voting_completed', False)
         role = getattr(self, 'role', 'participant')
         # USTAWIENIE self.is_croupier na podstawie aktualnych danych
         current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
@@ -498,13 +527,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
             if role == 'observer':
                 pass
             else:
-                if not all_voted and p['vote'] is not None:
+                if not (all_voted or voting_completed) and p['vote'] is not None:
                     p_copy['vote'] = None
             players_to_send.append(p_copy)
         await self.send(text_data=json.dumps({
             'type': event['type'],
             'players': players_to_send,
-            'all_voted': all_voted
+            'all_voted': all_voted,
+            'voting_completed': voting_completed
         }))
 
     async def table_reset(self, event):
@@ -515,6 +545,10 @@ class PokerConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event))
 
     async def player_removed(self, event):
+        # USTAWIENIE self.is_croupier na podstawie aktualnych danych
+        players = event['players']
+        current_player = next((p for p in players if p['nickname'] == getattr(self, 'nickname', None)), None)
+        self.is_croupier = current_player['is_croupier'] if current_player else False
         await self.send(text_data=json.dumps(event))
 
     async def get_or_create_table(self):
