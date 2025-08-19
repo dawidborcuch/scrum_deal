@@ -692,15 +692,11 @@ function updatePlayersList(players, allVoted) {
             const voteText = isFemale ? 'Zagłosowała' : 'Zagłosował';
             
             if (role === 'observer' || allVoted) {
-                // Pokaż głos jako kartę obok nicku
-                voteDisplay = `<span class="badge bg-success">${voteText}</span>`;
+                // Pokaż tylko głos jako cyfrę bez tekstu i bez otoczki
+                voteDisplay = '';
                 voteCard = `
                     <div class="d-inline-block ms-2">
-                        <div class="card poker-card d-inline-block" style="width: 50px; height: 70px; margin: 0; transform: scale(0.8);">
-                            <div class="card-body d-flex align-items-center justify-content-center p-1">
-                                <span class="vote-value" style="font-size: 1.2rem;">${player.vote}</span>
-                            </div>
-                        </div>
+                        <span class="vote-value" style="font-size: 2rem; color: #FF6600; font-weight: bold;">${player.vote}</span>
                     </div>
                 `;
             } else {
@@ -856,7 +852,10 @@ function assignCroupier(nicknameToAssign) {
 function updateCardsState(players, allVotedParam) {
     const currentPlayer = players.find(p => p.nickname === nickname);
     
-    if (role === 'observer') {
+    // Sprawdź aktualną rolę gracza z danych z backendu
+    const currentRole = currentPlayer ? currentPlayer.role : role;
+    
+    if (currentRole === 'observer') {
         document.querySelectorAll('.poker-card').forEach(card => {
             card.classList.add('disabled');
         });
@@ -892,7 +891,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('.poker-card').forEach(card => {
         card.addEventListener('click', function() {
-            if (role === 'observer') {
+            // Sprawdź aktualną rolę z danych graczy
+            const currentPlayer = window.lastPlayers ? window.lastPlayers.find(p => p.nickname === nickname) : null;
+            const currentRole = currentPlayer ? currentPlayer.role : role;
+            
+            if (currentRole === 'observer') {
                 return;
             }
             if (hasVoted) {
