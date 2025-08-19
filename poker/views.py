@@ -30,6 +30,11 @@ class HomeView(TemplateView):
             request.session.pop('last_is_croupier', None)
             request.session.pop('last_table_password', None)
         
+        # Sprawdź czy jest parametr table_name w URL (dla automatycznego otwierania modala)
+        table_name = request.GET.get('table_name')
+        if table_name:
+            context['auto_join_table'] = table_name
+        
         return context
     
     def get_active_tables(self):
@@ -61,7 +66,8 @@ class HomeView(TemplateView):
                     'participants': len(participants),
                     'observers': len(observers),
                     'croupier': croupier['nickname'] if croupier else None,
-                    'has_voting': any(p.get('has_voted') for p in participants)
+                    'has_voting': any(p.get('has_voted') for p in participants),
+                    'has_password': bool(table_info.get('password'))
                 })
         
         # Sortuj po liczbie graczy (malejąco)

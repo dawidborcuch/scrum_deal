@@ -695,7 +695,7 @@ function updatePlayersList(players, allVoted) {
                 // Pokaż tylko głos jako cyfrę bez tekstu i bez otoczki
                 voteDisplay = '';
                 voteCard = `
-                    <div class="d-inline-block ms-2">
+                    <div class="d-inline-block ms-auto">
                         <span class="vote-value" style="font-size: 2rem; color: #FF6600; font-weight: bold;">${player.vote}</span>
                     </div>
                 `;
@@ -718,9 +718,12 @@ function updatePlayersList(players, allVoted) {
             <div class='card player-card position-relative'>
                 ${actionBtns}
                 <div class='card-body'>
-                    <h5 class='card-title d-flex align-items-center'>
-                        ${player.nickname} ${croupierBadge} ${voteCard}
-                    </h5>
+                    <div class='d-flex align-items-center justify-content-between'>
+                        <h5 class='card-title mb-0'>
+                            ${player.nickname} ${croupierBadge}
+                        </h5>
+                        ${voteCard}
+                    </div>
                     <p class='card-text'>
                         ${voteDisplay}
                     </p>

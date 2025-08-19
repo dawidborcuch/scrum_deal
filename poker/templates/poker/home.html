@@ -1015,5 +1015,34 @@ function debugCache() {
             // Debug error
         });
 }
+
+// Automatyczne otwieranie modala dołączania do stołu
+document.addEventListener('DOMContentLoaded', function() {
+    {% if auto_join_table %}
+    // Automatycznie otwórz modal dołączania do stołu
+    const tableName = "{{ auto_join_table }}";
+    const quickJoinModal = new bootstrap.Modal(document.getElementById('quickJoinModal'));
+    
+    // Wypełnij nazwę stołu w modalu
+    document.getElementById('quickJoinTableName').value = tableName;
+    
+    // Sprawdź czy stół wymaga hasła
+    const activeTables = {{ active_tables|safe }};
+    const targetTable = activeTables.find(table => table.name === tableName);
+    
+    if (targetTable && targetTable.has_password) {
+        document.getElementById('quickPasswordField').style.display = 'block';
+        document.getElementById('quickTablePassword').required = true;
+    }
+    
+    // Otwórz modal
+    quickJoinModal.show();
+    
+    // Wyczyść parametr z URL (ale zachowaj historię)
+    const url = new URL(window.location);
+    url.searchParams.delete('table_name');
+    window.history.replaceState({}, '', url);
+    {% endif %}
+});
 </script>
 {% endblock %} 
