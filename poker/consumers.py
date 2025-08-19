@@ -103,6 +103,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
                 await self.handle_ping_activity(data)
             elif action == 'get_voting_history':
                 await self.handle_get_voting_history()
+            elif action == 'switch_role':
+                await self.handle_switch_role()
         except Exception as e:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -648,6 +650,89 @@ class PokerConsumer(AsyncWebsocketConsumer):
             }
             await self.save_active_tables(active_tables)
             
+    async def handle_switch_role(self):
+        """Obsługuje przełączanie roli między obserwatorem a uczestnikiem."""
+        # Każdy gracz może przełączać swoją rolę
+        if not getattr(self, 'nickname', None):
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Nie jesteś zalogowany!'
+            }))
+            return
+
+        # Pobierz aktualne dane stołu
+        table_data = await self.get_table_data()
+        if not table_data:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Nie można pobrać danych stołu.'
+            }))
+            return
+
+        players_data = table_data.get('players', [])
+        current_player_nickname = getattr(self, 'nickname', None)
+
+        if not current_player_nickname:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Nie znaleziono gracza w stanie.'
+            }))
+            return
+
+        # Znajdź gracza i zmień jego rolę
+        current_player_data = None
+        for p in players_data:
+            if p['nickname'] == current_player_nickname:
+                current_player_data = p
+                break
+
+        if not current_player_data:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Nie znaleziono gracza w danych stołu.'
+            }))
+            return
+
+        # Zmień rolę gracza
+        current_player_data['role'] = 'participant' if current_player_data['role'] == 'observer' else 'observer'
+        current_player_data['has_voted'] = False # Resetuj głos
+        current_player_data['vote'] = None # Resetuj głos
+
+        # Zaktualizuj stan gracza w konsumencie
+        self.role = current_player_data['role']
+        self.is_croupier = False # Ustaw krupiera na False, jeśli gracz stał się uczestnikiem
+
+        # Zapisz zmiany
+        await self.save_table_data(table_data)
+        
+        # Aktualizuj globalną listę aktywnych stołów
+        active_tables = await self.get_active_tables()
+        existing_password = active_tables.get(self.table_name, {}).get('password')
+        active_tables[self.table_name] = {
+            'players': players_data,
+            'last_updated': time.time(),
+            'password': existing_password
+        }
+        await self.save_active_tables(active_tables)
+
+        # Wyślij aktualizację do wszystkich graczy
+        await self.channel_layer.group_send(
+            self.table_group_name,
+            {
+                'type': 'player_joined',
+                'players': players_data,
+                'all_voted': all(player['has_voted'] for player in players_data if player.get('role', 'participant') == 'participant')
+            }
+        )
+        
+        # Wyślij aktualizację do strony głównej
+        await self.channel_layer.group_send(
+            'home_page',
+            {
+                'type': 'broadcast_table_update'
+            }
+        )
+
 class HomeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         logger.info(f"DEBUG: HomeConsumer connect - rozpoczynam połączenie")

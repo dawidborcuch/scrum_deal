@@ -235,6 +235,9 @@
                         <button class="btn btn-secondary btn-lg" id="historyButton">
                             <i class="fas fa-history me-2"></i>Historia głosowania
                         </button>
+                        <button class="btn btn-outline-primary btn-lg" id="switchRoleButton" style="display: none;">
+                            <i class="fas fa-exchange-alt me-2"></i><span id="switchRoleText">Zostań obserwatorem</span>
+                        </button>
                         <button class="btn btn-warning btn-lg" id="becomeCroupierButton" style="display: none;">
                             <i class="fas fa-crown me-2"></i>Otrzymaj rolę krupiera
                         </button>
@@ -681,15 +684,25 @@ function updatePlayersList(players, allVoted) {
         playerCard.className = 'col-md-4 mb-3';
         
         let voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
+        let voteCard = '';
+        
         if (player.has_voted) {
             // Sprawdź czy nick kończy się na 'a' dla odpowiedniej odmiany
             const isFemale = player.nickname.toLowerCase().endsWith('a');
             const voteText = isFemale ? 'Zagłosowała' : 'Zagłosował';
             
-            if (role === 'observer') {
-                voteDisplay = `<span class="badge bg-success">${voteText}: ${player.vote}</span>`;
-            } else if (allVoted) {
-                voteDisplay = `<span class="badge bg-success">${voteText}: ${player.vote}</span>`;
+            if (role === 'observer' || allVoted) {
+                // Pokaż głos jako kartę obok nicku
+                voteDisplay = `<span class="badge bg-success">${voteText}</span>`;
+                voteCard = `
+                    <div class="d-inline-block ms-2">
+                        <div class="card poker-card d-inline-block" style="width: 50px; height: 70px; margin: 0; transform: scale(0.8);">
+                            <div class="card-body d-flex align-items-center justify-content-center p-1">
+                                <span class="vote-value" style="font-size: 1.2rem;">${player.vote}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
             } else {
                 voteDisplay = `<span class="badge bg-info">${voteText}</span>`;
             }
@@ -709,7 +722,9 @@ function updatePlayersList(players, allVoted) {
             <div class='card player-card position-relative'>
                 ${actionBtns}
                 <div class='card-body'>
-                    <h5 class='card-title'>${player.nickname} ${croupierBadge}</h5>
+                    <h5 class='card-title d-flex align-items-center'>
+                        ${player.nickname} ${croupierBadge} ${voteCard}
+                    </h5>
                     <p class='card-text'>
                         ${voteDisplay}
                     </p>
@@ -771,7 +786,9 @@ function updatePlayersList(players, allVoted) {
     const resetBtn = document.getElementById('resetButton');
     const becomeCroupierBtn = document.getElementById('becomeCroupierButton');
     const statsBtn = document.getElementById('statsButton');
-    
+    const switchRoleBtn = document.getElementById('switchRoleButton');
+    const switchRoleText = document.getElementById('switchRoleText');
+
     if (resetBtn) {
         resetBtn.style.display = isCroupierNow ? '' : 'none';
     }
@@ -781,6 +798,19 @@ function updatePlayersList(players, allVoted) {
     }
     if (statsBtn) {
         statsBtn.style.display = allVoted ? '' : 'none';
+    }
+    if (switchRoleBtn) {
+        // Pokaż przycisk przełączania roli dla wszystkich graczy
+        switchRoleBtn.style.display = '';
+        // Ustaw tekst na podstawie aktualnej roli
+        const currentPlayer = players.find(p => p.nickname === nickname);
+        if (currentPlayer) {
+            if (currentPlayer.role === 'observer') {
+                switchRoleText.textContent = 'Dołącz do głosowania';
+            } else {
+                switchRoleText.textContent = 'Zostań obserwatorem';
+            }
+        }
     }
     // Dodaj menu kontekstowe tylko jeśli jesteś krupierem
     if (isCroupierNow) {
@@ -934,6 +964,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         
         // Ping aktywności po otwarciu historii
+        pingActivity();
+    });
+    
+    document.getElementById('switchRoleButton').addEventListener('click', function() {
+        socket.send(JSON.stringify({
+            'action': 'switch_role'
+        }));
+        
+        // Ping aktywności po przełączeniu roli
         pingActivity();
     });
     
@@ -1135,6 +1174,46 @@ const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchst
 activityEvents.forEach(event => {
     document.addEventListener(event, resetActivityTimer, true);
 });
+
+// Obsługa Page Visibility API dla urządzeń mobilnych
+let isPageVisible = true;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+
+// Funkcja do sprawdzania widoczności strony
+function handleVisibilityChange() {
+    if (document.hidden) {
+        isPageVisible = false;
+        console.log('Strona ukryta - zatrzymuję ping aktywności');
+    } else {
+        isPageVisible = true;
+        console.log('Strona widoczna - wznawiam ping aktywności');
+        // Natychmiastowy ping po powrocie do strony
+        pingActivity();
+        resetActivityTimer();
+    }
+}
+
+// Funkcja do sprawdzania połączenia WebSocket
+function checkWebSocketConnection() {
+    if (socket && socket.readyState === WebSocket.CLOSED) {
+        console.log('WebSocket zamknięty - próba ponownego połączenia...');
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(() => {
+                connectWebSocket();
+            }, 2000 * reconnectAttempts); // Exponential backoff
+        }
+    } else if (socket && socket.readyState === WebSocket.OPEN) {
+        reconnectAttempts = 0; // Reset licznika prób
+    }
+}
+
+// Event listener dla zmiany widoczności strony
+document.addEventListener('visibilitychange', handleVisibilityChange);
+
+// Sprawdzanie połączenia co 10 sekund
+setInterval(checkWebSocketConnection, 10000);
 
 // Inicjalizacja timera aktywności
 resetActivityTimer();
