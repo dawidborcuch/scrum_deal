@@ -685,7 +685,7 @@ function updatePlayersList(players, allVoted, votingCompleted = false) {
         
         let voteDisplay = '';
         if (!player.has_voted) {
-            if (votingCompleted) {
+            if (votingCompleted && player.joined_after_voting_completed) {
                 voteDisplay = '<span class="badge bg-secondary">Oczekuje na reset głosowania</span>';
             } else {
                 voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';

@@ -185,6 +185,14 @@ class PokerConsumer(AsyncWebsocketConsumer):
         # Sprawdź czy głosowanie było już zakończone
         voting_completed = table_data.get('voting_completed', False)
         
+        # Oznacz nowego gracza jako dołączonego po zakończeniu głosowania (jeśli głosowanie było zakończone)
+        if voting_completed:
+            # Znajdź nowego gracza i oznacz go
+            for player in players_data:
+                if player['nickname'] == nickname:
+                    player['joined_after_voting_completed'] = True
+                    break
+        
         # Wyślij aktualny stan stołu
         await self.channel_layer.group_send(
             self.table_group_name,
@@ -284,6 +292,8 @@ class PokerConsumer(AsyncWebsocketConsumer):
         for player in players_data:
             player['has_voted'] = False
             player['vote'] = None
+            # Resetuj flagę dołączania po zakończeniu głosowania
+            player['joined_after_voting_completed'] = False
 
         # Resetuj stan głosowania
         table_data['voting_completed'] = False
