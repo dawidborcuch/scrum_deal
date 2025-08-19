@@ -99,232 +99,258 @@
     }
     
     /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-        .form-label {
-            color: #e9ecef !important;
-        }
-        
-        .form-check-label {
-            color: #e9ecef !important;
-        }
-        
-        .form-text {
-            color: #adb5bd !important;
-        }
-        
-        .text-muted {
-            color: #adb5bd !important;
-        }
-        
-        .card {
-            background-color: #2d3748 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        .card-header {
-            background-color: #4a5568 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        .list-group-item {
-            background-color: #2d3748 !important;
-            border-color: #4a5568 !important;
-            color: #e9ecef !important;
-        }
-        
-        .list-group-item:hover {
-            background-color: #4a5568 !important;
-        }
-        
-        .modal-content {
-            background-color: #2d3748 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        .modal-header {
-            background-color: #4a5568 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        .modal-body {
-            background-color: #2d3748 !important;
-        }
-        
-        .form-control {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        .form-control:focus {
-            background-color: #4a5568 !important;
-            border-color: #007bff !important;
-            color: #e9ecef !important;
-        }
-        
-        .btn-outline-secondary {
-            color: #e9ecef !important;
-            border-color: #718096 !important;
-        }
-        
-        .btn-outline-secondary:hover {
-            background-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        /* Specyficzne style dla modala w Dark mode */
-        #quickJoinModal .modal-content {
-            background-color: #2d3748 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        #quickJoinModal .modal-header {
-            background-color: #4a5568 !important;
-            border-color: #4a5568 !important;
-        }
-        
-        #quickJoinModal .modal-body {
-            background-color: #2d3748 !important;
-        }
-        
-        #quickJoinModal .form-label {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-check-label {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-control {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-control:focus {
-            background-color: #4a5568 !important;
-            border-color: #007bff !important;
-            color: #e9ecef !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-        }
-        
-        #quickJoinModal .form-select {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-select:focus {
-            background-color: #4a5568 !important;
-            border-color: #007bff !important;
-            color: #e9ecef !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-        }
-        
-        #quickJoinModal .modal-title {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .text-muted {
-            color: #adb5bd !important;
-        }
-        
-        #quickJoinModal .form-text {
-            color: #adb5bd !important;
-        }
-        
-        #quickJoinModal .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
-        
-        #quickJoinModal .form-text {
-            color: #adb5bd !important;
-        }
-        
-        #quickJoinModal .form-control {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-control:focus {
-            background-color: #4a5568 !important;
-            border-color: #007bff !important;
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .btn-outline-secondary {
-            color: #e9ecef !important;
-            border-color: #718096 !important;
-        }
-        
-        #quickJoinModal .btn-outline-secondary:hover {
-            background-color: #718096 !important;
-            color: #e9ecef !important;
-        }
-        
-        /* Dodatkowe style dla modala w Dark mode - bardziej specyficzne */
-        #quickJoinModal .modal-title {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-check-input {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-        }
-        
-        #quickJoinModal .form-check-input:checked {
-            background-color: #007bff !important;
-            border-color: #007bff !important;
-        }
-        
-        #quickJoinModal .form-check-input:focus {
-            border-color: #007bff !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-        }
-        
-        #quickJoinModal .form-switch .form-check-input {
-            background-color: #4a5568 !important;
-            border-color: #718096 !important;
-        }
-        
-        #quickJoinModal .form-switch .form-check-input:checked {
-            background-color: #007bff !important;
-            border-color: #007bff !important;
-        }
-        
-        #quickJoinModal .form-switch .form-check-input:focus {
-            border-color: #007bff !important;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-        }
-        
-        #quickJoinModal .form-check-inline .form-check-label {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-check .form-check-label {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .form-switch .form-check-label {
-            color: #e9ecef !important;
-        }
-        
-        #quickJoinModal .text-muted {
-            color: #adb5bd !important;
-        }
-        
-        #quickJoinModal .form-text {
-            color: #adb5bd !important;
-        }
-        
-        #quickJoinModal .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
-        
-        #quickJoinModal .btn-close-white {
-            filter: none !important;
-        }
+    body.dark-mode .form-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode .form-check-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode .form-text {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode .card {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode .card-header {
+        background-color: #4a5568 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode .list-group-item {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode .list-group-item:hover {
+        background-color: #4a5568 !important;
+    }
+    
+    body.dark-mode .modal-content {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode .modal-header {
+        background-color: #4a5568 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode .modal-body {
+        background-color: #2d3748 !important;
+    }
+    
+    body.dark-mode .form-control {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode .form-control:focus {
+        background-color: #4a5568 !important;
+        border-color: #007bff !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode .btn-outline-secondary {
+        color: #e9ecef !important;
+        border-color: #718096 !important;
+    }
+    
+    body.dark-mode .btn-outline-secondary:hover {
+        background-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    /* Specyficzne style dla modala w Dark mode */
+    body.dark-mode #quickJoinModal .modal-content {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .modal-header {
+        background-color: #4a5568 !important;
+        border-color: #4a5568 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .modal-body {
+        background-color: #2d3748 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-control {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-control:focus {
+        background-color: #4a5568 !important;
+        border-color: #007bff !important;
+        color: #e9ecef !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-select {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-select:focus {
+        background-color: #4a5568 !important;
+        border-color: #007bff !important;
+        color: #e9ecef !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+    }
+    
+    body.dark-mode #quickJoinModal .modal-title {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-text {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode #quickJoinModal .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    body.dark-mode #quickJoinModal .form-text {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-control {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-control:focus {
+        background-color: #4a5568 !important;
+        border-color: #007bff !important;
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .btn-outline-secondary {
+        color: #e9ecef !important;
+        border-color: #718096 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .btn-outline-secondary:hover {
+        background-color: #718096 !important;
+        color: #e9ecef !important;
+    }
+    
+    /* Dodatkowe style dla modala w Dark mode - bardziej specyficzne */
+    body.dark-mode #quickJoinModal .modal-title {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check-input {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check-input:checked {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check-input:focus {
+        border-color: #007bff !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-switch .form-check-input {
+        background-color: #4a5568 !important;
+        border-color: #718096 !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-switch .form-check-input:checked {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-switch .form-check-input:focus {
+        border-color: #007bff !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check-inline .form-check-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-check .form-check-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-switch .form-check-label {
+        color: #e9ecef !important;
+    }
+    
+    body.dark-mode #quickJoinModal .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode #quickJoinModal .form-text {
+        color: #adb5bd !important;
+    }
+    
+    body.dark-mode #quickJoinModal .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    body.dark-mode #quickJoinModal .btn-close-white {
+        filter: none !important;
+    }
+    
+    /* Dark mode dla placeholderów w modalu */
+    body.dark-mode #quickJoinModal .form-control::placeholder {
+        color: #adb5bd !important;
+    }
+    
+    /* Dark mode dla tooltips Bootstrap */
+    body.dark-mode .tooltip .tooltip-inner {
+        background-color: #2d3748 !important;
+        color: #e9ecef !important;
+        border: 1px solid #4a5568 !important;
+    }
+    
+    body.dark-mode .tooltip .tooltip-arrow::before {
+        border-top-color: #2d3748 !important;
+    }
+    
+    body.dark-mode .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+        border-bottom-color: #2d3748 !important;
+    }
+    
+    body.dark-mode .tooltip.bs-tooltip-start .tooltip-arrow::before {
+        border-left-color: #2d3748 !important;
+    }
+    
+    body.dark-mode .tooltip.bs-tooltip-end .tooltip-arrow::before {
+        border-right-color: #2d3748 !important;
     }
     
     .quick-join-modal .card-header {
