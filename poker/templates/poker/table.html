@@ -683,7 +683,12 @@ function updatePlayersList(players, allVoted, votingCompleted = false) {
         const playerCard = document.createElement('div');
         playerCard.className = 'col-md-4 mb-3';
         
-        let voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
+        let voteDisplay = '';
+        if (votingCompleted) {
+            voteDisplay = '<span class="badge bg-secondary">Oczekuje na reset głosowania</span>';
+        } else {
+            voteDisplay = '<span class="badge bg-warning">Oczekuje na głos</span>';
+        }
         let voteCard = '';
         
         if (player.has_voted) {
